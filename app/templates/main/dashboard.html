@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PsySuite Web Manager{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="left-panel">
+        <h3>Available Tests</h3>
+        
+        {% if current_user.role == 'admin' %}
+        <div class="test-actions">
+            <button onclick="createTest()" class="btn btn-primary">Create New Test</button>
+            <button onclick="deleteTest()" class="btn btn-danger">Delete Selected</button>
+            <button onclick="editTest()" class="btn btn-secondary">Edit Selected</button>
+            <button onclick="viewExperiments()" class="btn btn-info">View Experiments</button>
+        </div>
+        {% endif %}
+        
+        <ul class="test-list" id="testList">
+            {% for test in tests %}
+            <li class="test-item" data-test-id="{{ test.id }}" 
+                onclick="selectTest({{ test.id }})" 
+                ondblclick="viewExperiments({{ test.id }})">
+                <strong>{{ test.name }}</strong>
+                <br>
+                <small>Status: {{ test.status.title() }} | Experiments: {{ test.get_experiment_count() }}</small>
+            </li>
+            {% endfor %}
+        </ul>
+        
+        {% if not tests %}
+        <p class="text-muted">No tests available.</p>
+        {% endif %}
+    </div>
+    
+    <div class="right-panel">
+        <h3>Test Parameters</h3>
+        <table class="parameters-table" id="parametersTable">
+            <thead>
+                <tr>
+                    <th>Label</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody id="parametersBody">
+                <tr>
+                    <td colspan="2" class="text-muted">Select a test to view parameters</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Override the loadTestParameters function to use our API
+function loadTestParameters(testId) {
+    fetch(`/api/tests/${testId}/parameters`)
+        .then(response => response.json())
+        .then(test => {
+            const tbody = document.getElementById('parametersBody');
+            tbody.innerHTML = '';
+            
+            // Add basic test info
+            const basicInfo = [
+                ['Name', test.name],
+                ['Class Name', test.class_name],
+                ['Status', test.status],
+                ['Description', test.description || 'N/A'],
+                ['Experiments', test.experiment_count]
+            ];
+            
+            basicInfo.forEach(([key, value]) => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerHTML = `<strong>${key}</strong>`;
+                row.insertCell(1).textContent = value;
+            });
+            
+            // Add separator
+            const separatorRow = tbody.insertRow();
+            separatorRow.insertCell(0).innerHTML = '<strong>Default Parameters</strong>';
+            separatorRow.insertCell(1).innerHTML = '<strong>Value</strong>';
+            
+            // Add default parameters
+            if (test.default_parameters) {
+                Object.entries(test.default_parameters).forEach(([key, value]) => {
+                    const row = tbody.insertRow();
+                    row.insertCell(0).textContent = key;
+                    row.insertCell(1).textContent = value;
+                });
+            }
+            
+            // Add separator
+            const separatorRow2 = tbody.insertRow();
+            separatorRow2.insertCell(0).innerHTML = '<strong>Trial Columns</strong>';
+            separatorRow2.insertCell(1).innerHTML = '<strong>Type</strong>';
+            
+            // Add trial columns
+            if (test.trial_columns) {
+                Object.entries(test.trial_columns).forEach(([key, value]) => {
+                    const row = tbody.insertRow();
+                    row.insertCell(0).textContent = key;
+                    row.insertCell(1).textContent = value;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading test parameters:', error);
+            showAlert('Error loading test parameters', 'danger');
+        });
+}
+</script>
+{% endblock %}

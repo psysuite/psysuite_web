@@ -1,0 +1,67 @@
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+from flask_migrate import Migrate
+from config import config
+
+db = SQLAlchemy()
+login_manager = LoginManager()
+migrate = Migrate()
+
+
+def create_app(config_name='default'):
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
+    
+    # Initialize extensions
+    db.init_app(app)
+    login_manager.init_app(app)
+    migrate.init_app(app, db)
+    
+    # Initialize mail
+    from app.utils.email import init_mail
+    init_mail(app)
+    
+    # Configure login manager
+    login_manager.login_view = 'web.login'
+    login_manager.login_message = 'Please log in to access this page.'
+    login_manager.login_message_category = 'info'
+    
+    # Register blueprints
+    from app.api import bp as api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
+    
+    from app.web import bp as web_bp
+    app.register_blueprint(web_bp)
+    
+    # Initialize database and create default admin user
+    with app.app_context():
+        from app.models.user import User
+        from app.models.test import Test
+        from app.models.experiment import Experiment
+        from app.models.dynamic_models import initialize_existing_tests
+        
+        # Create tables
+        db.create_all()
+        
+        # Create default admin user if it doesn't exist
+        admin = User.query.filter_by(email=app.config['ADMIN_EMAIL']).first()
+        if not admin:
+            admin = User(
+                email=app.config['ADMIN_EMAIL'],
+                role='admin'
+            )
+            admin.set_password(app.config['ADMIN_PASSWORD'])
+            db.session.add(admin)
+            db.session.commit()
+        
+        # Initialize existing trial models
+        initialize_existing_tests()
+    
+    return app
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    from app.models.user import User
+    return User.query.get(int(user_id))

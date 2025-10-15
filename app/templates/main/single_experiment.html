@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Experiment {{ experiment.unique_id }} - PsySuite Web Manager{% endblock %}
+
+{% block content %}
+<div class="content">
+    <h2>Experiment Details</h2>
+    
+    <!-- Experiment Info -->
+    <div class="experiment-info" style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div>
+                <strong>Subject:</strong> {{ experiment.subject_label or 'N/A' }}
+            </div>
+            <div>
+                <strong>Age:</strong> {{ experiment.subject_age or 'N/A' }}
+            </div>
+            <div>
+                <strong>Gender:</strong> {{ experiment.get_gender_display() }}
+            </div>
+            <div>
+                <strong>Test:</strong> {{ experiment.test.name }}
+            </div>
+            <div>
+                <strong>Status:</strong> {{ experiment.get_completion_status_display() }}
+            </div>
+            <div>
+                <strong>Upload Date:</strong> {{ experiment.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') if experiment.uploaded_at else 'N/A' }}
+            </div>
+            <div>
+                <strong>Device:</strong> {{ experiment.get_device_display() }}
+            </div>
+            <div>
+                <strong>Trials:</strong> {{ trials|length }}
+            </div>
+        </div>
+        
+        <div style="margin-top: 1rem;">
+            <a href="/api/experiments/download?experiment_ids={{ experiment.id }}" class="btn btn-primary">
+                Download Experiment Data
+            </a>
+        </div>
+    </div>
+    
+    <!-- Trial Data -->
+    <div class="trials-section">
+        <h3>Trial Data</h3>
+        
+        {% if trials %}
+        <div style="overflow-x: auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        {% for column in trials[0].keys() %}
+                            {% if column not in ['id', 'experiment_id', 'created_at'] %}
+                            <th>{{ column.replace('_', ' ').title() }}</th>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trial in trials %}
+                    <tr>
+                        {% for column, value in trial.items() %}
+                            {% if column not in ['id', 'experiment_id', 'created_at'] %}
+                            <td>
+                                {% if value is none %}
+                                    <span class="text-muted">N/A</span>
+                                {% elif value is sameas true %}
+                                    <span class="text-success">True</span>
+                                {% elif value is sameas false %}
+                                    <span class="text-danger">False</span>
+                                {% else %}
+                                    {{ value }}
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No trial data available for this experiment.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Configuration Data (Collapsible) -->
+    <div class="configuration-section" style="margin-top: 2rem;">
+        <h3>
+            <button class="btn btn-secondary" onclick="toggleConfiguration()" id="configToggle">
+                Show Configuration Data
+            </button>
+        </h3>
+        
+        <div id="configurationData" style="display: none; margin-top: 1rem;">
+            <pre style="background: #f8f9fa; padding: 1rem; border-radius: 4px; overflow-x: auto;">{{ experiment.configuration | tojson(indent=2) if experiment.configuration else 'No configuration data available' }}</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleConfiguration() {
+    const configData = document.getElementById('configurationData');
+    const toggleBtn = document.getElementById('configToggle');
+    
+    if (configData.style.display === 'none') {
+        configData.style.display = 'block';
+        toggleBtn.textContent = 'Hide Configuration Data';
+    } else {
+        configData.style.display = 'none';
+        toggleBtn.textContent = 'Show Configuration Data';
+    }
+}
+</script>
+
+<style>
+.text-success {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.text-danger {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+.text-muted {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.experiment-info {
+    border-left: 4px solid #007bff;
+}
+
+.trials-section .table {
+    font-size: 0.9rem;
+}
+
+.trials-section .table th {
+    background-color: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+</style>
+{% endblock %}

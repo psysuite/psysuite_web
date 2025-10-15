@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Test' if test else 'Create Test' }} - PsySuite Web Manager{% endblock %}
+
+{% block content %}
+<div class="content">
+    <h2>{{ 'Edit Test' if test else 'Create New Test' }}</h2>
+    
+    <form method="POST" style="max-width: 800px;">
+        <div class="form-group">
+            <label for="name">Test Name:</label>
+            <input type="text" id="name" name="name" class="form-control" 
+                   value="{{ test.name if test else '' }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="class_name">Test Class Name:</label>
+            <input type="text" id="class_name" name="class_name" class="form-control" 
+                   value="{{ test.class_name if test else '' }}" required
+                   placeholder="e.g., iit.uvip.psysuite.core.tests.tsp.TestTSP">
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea id="description" name="description" class="form-control" rows="3">{{ test.description if test else '' }}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="default_parameters">Default Parameters (JSON):</label>
+            <textarea id="default_parameters" name="default_parameters" class="form-control" rows="8" 
+                      placeholder='{"nextTrailModality": -1, "whitenoise": 0, "trman_type": 0}'>{{ (test.default_parameters | tojson(indent=2)) if test and test.default_parameters else '' }}</textarea>
+            <small class="text-muted">Enter default test parameters as JSON. Leave empty if none.</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="trial_columns">Trial Columns (JSON) *:</label>
+            <textarea id="trial_columns" name="trial_columns" class="form-control" rows="8" required
+                      placeholder='{"stimulus_magnitude": "float", "response_time": "integer", "user_response": "string", "correct_response": "boolean"}'>{{ (test.trial_columns | tojson(indent=2)) if test and test.trial_columns else '' }}</textarea>
+            <small class="text-muted">Define trial result columns as JSON. Valid types: integer, float, string, boolean, datetime, text</small>
+        </div>
+        
+        {% if test %}
+        <div class="form-group">
+            <label>Current Status:</label>
+            <select name="status" class="form-control">
+                <option value="development" {{ 'selected' if test.status == 'development' else '' }}>Development</option>
+                <option value="production" {{ 'selected' if test.status == 'production' else '' }}>Production</option>
+                <option value="finalized" {{ 'selected' if test.status == 'finalized' else '' }}>Finalized</option>
+            </select>
+        </div>
+        {% endif %}
+        
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">{{ 'Update Test' if test else 'Create Test' }}</button>
+            <a href="{{ url_for('web.dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    
+    {% if test %}
+    <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #dee2e6;">
+        <h3>Test Information</h3>
+        <ul>
+            <li><strong>Created:</strong> {{ test.created_at.strftime('%Y-%m-%d %H:%M:%S') if test.created_at else 'N/A' }}</li>
+            <li><strong>Last Updated:</strong> {{ test.updated_at.strftime('%Y-%m-%d %H:%M:%S') if test.updated_at else 'N/A' }}</li>
+            <li><strong>Experiments:</strong> {{ test.get_experiment_count() }}</li>
+            <li><strong>Status:</strong> {{ test.status.title() }}</li>
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// JSON validation and formatting
+function validateJSON(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    try {
+        if (textarea.value.trim()) {
+            const parsed = JSON.parse(textarea.value);
+            textarea.value = JSON.stringify(parsed, null, 2);
+            textarea.style.borderColor = '';
+        }
+    } catch (e) {
+        textarea.style.borderColor = '#dc3545';
+        showAlert(`Invalid JSON in ${textareaId.replace('_', ' ')}: ${e.message}`, 'danger');
+    }
+}
+
+document.getElementById('default_parameters').addEventListener('blur', function() {
+    validateJSON('default_parameters');
+});
+
+document.getElementById('trial_columns').addEventListener('blur', function() {
+    validateJSON('trial_columns');
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const trialColumns = document.getElementById('trial_columns').value.trim();
+    
+    if (!trialColumns) {
+        e.preventDefault();
+        showAlert('Trial columns are required', 'danger');
+        return;
+    }
+    
+    try {
+        const parsed = JSON.parse(trialColumns);
+        if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+            e.preventDefault();
+            showAlert('Trial columns must be a JSON object', 'danger');
+            return;
+        }
+        
+        const validTypes = ['integer', 'float', 'string', 'boolean', 'datetime', 'text'];
+        for (const [key, value] of Object.entries(parsed)) {
+            if (!validTypes.includes(value)) {
+                e.preventDefault();
+                showAlert(`Invalid column type "${value}" for column "${key}". Valid types: ${validTypes.join(', ')}`, 'danger');
+                return;
+            }
+        }
+    } catch (e) {
+        e.preventDefault();
+        showAlert('Invalid JSON format in trial columns', 'danger');
+    }
+});
+</script>
+{% endblock %}

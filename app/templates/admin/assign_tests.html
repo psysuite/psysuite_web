@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Tests - PsySuite Web Manager{% endblock %}
+
+{% block content %}
+<div class="content">
+    <h2>Assign Tests to {{ user.email }}</h2>
+    
+    <form method="POST">
+        <div class="form-group">
+            <label>Available Tests:</label>
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ced4da; padding: 1rem; border-radius: 4px;">
+                {% for test in all_tests %}
+                <div class="form-check" style="margin-bottom: 0.5rem;">
+                    <input type="checkbox" 
+                           class="form-check-input" 
+                           id="test_{{ test.id }}" 
+                           name="test_ids" 
+                           value="{{ test.id }}"
+                           {{ 'checked' if test.id in current_assignments else '' }}>
+                    <label class="form-check-label" for="test_{{ test.id }}">
+                        <strong>{{ test.name }}</strong>
+                        <br>
+                        <small class="text-muted">
+                            Status: {{ test.status.title() }} | 
+                            Experiments: {{ test.get_experiment_count() }}
+                        </small>
+                        {% if test.description %}
+                        <br>
+                        <small class="text-muted">{{ test.description }}</small>
+                        {% endif %}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Update Assignments</button>
+            <a href="{{ url_for('web.users') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+        
+        <div class="form-group">
+            <button type="button" onclick="selectAll()" class="btn btn-info btn-sm">Select All</button>
+            <button type="button" onclick="selectNone()" class="btn btn-info btn-sm">Select None</button>
+            <button type="button" onclick="selectProduction()" class="btn btn-info btn-sm">Select Production Only</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function selectAll() {
+    document.querySelectorAll('input[name="test_ids"]').forEach(cb => {
+        cb.checked = true;
+    });
+}
+
+function selectNone() {
+    document.querySelectorAll('input[name="test_ids"]').forEach(cb => {
+        cb.checked = false;
+    });
+}
+
+function selectProduction() {
+    document.querySelectorAll('input[name="test_ids"]').forEach(cb => {
+        const label = cb.nextElementSibling;
+        const statusText = label.textContent;
+        cb.checked = statusText.includes('Status: Production');
+    });
+}
+</script>
+
+<style>
+.form-check {
+    padding-left: 1.25rem;
+}
+
+.form-check-input {
+    margin-left: -1.25rem;
+}
+
+.form-check-label {
+    display: block;
+    padding-left: 0.5rem;
+}
+</style>
+{% endblock %}

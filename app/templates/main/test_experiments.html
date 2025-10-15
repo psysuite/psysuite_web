@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}{{ test.name }} Experiments - PsySuite Web Manager{% endblock %}
+
+{% block content %}
+<div class="content">
+    <h2>{{ test.name }} - Experiments</h2>
+    <p class="text-muted">{{ test.description or 'No description available' }}</p>
+    
+    <div style="margin-bottom: 1rem;">
+        <button onclick="selectAllExperiments()" class="btn btn-secondary" id="selectAllBtn">Select All</button>
+        <button onclick="downloadSelectedExperiments()" class="btn btn-primary" id="downloadBtn" disabled>Download Selected</button>
+        <span id="selectedCount" class="text-muted" style="margin-left: 1rem;">0 selected</span>
+    </div>
+    
+    {% if experiments.items %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th width="50">
+                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                </th>
+                <th>Subject</th>
+                <th>Age</th>
+                <th>Gender</th>
+                <th>Status</th>
+                <th>Trials</th>
+                <th>Upload Date</th>
+                <th>Device</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for experiment in experiments.items %}
+            <tr ondblclick="window.location.href='{{ url_for('web.single_experiment', experiment_id=experiment.id) }}'">
+                <td>
+                    <input type="checkbox" data-experiment-id="{{ experiment.id }}" onchange="updateSelectedCount()">
+                </td>
+                <td>{{ experiment.subject_label or 'N/A' }}</td>
+                <td>{{ experiment.subject_age or 'N/A' }}</td>
+                <td>{{ experiment.get_gender_display() }}</td>
+                <td>
+                    <span class="badge badge-{{ 'success' if experiment.completion_status == 'completed' else 'warning' }}">
+                        {{ experiment.get_completion_status_display() }}
+                    </span>
+                </td>
+                <td>{{ experiment.get_trial_count() }}</td>
+                <td>{{ experiment.uploaded_at.strftime('%Y-%m-%d %H:%M') if experiment.uploaded_at else 'N/A' }}</td>
+                <td>{{ experiment.get_device_display() }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Pagination -->
+    {% if experiments.pages > 1 %}
+    <div class="pagination">
+        {% if experiments.has_prev %}
+            <a href="{{ url_for('web.test_experiments', test_id=test.id, page=experiments.prev_num) }}" class="btn btn-secondary">Previous</a>
+        {% endif %}
+        
+        <span>Page {{ experiments.page }} of {{ experiments.pages }}</span>
+        
+        {% if experiments.has_next %}
+            <a href="{{ url_for('web.test_experiments', test_id=test.id, page=experiments.next_num) }}" class="btn btn-secondary">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <p class="text-muted">No experiments found for this test.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const checkboxes = document.querySelectorAll('input[data-experiment-id]');
+    
+    checkboxes.forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+    });
+    
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('input[data-experiment-id]:checked');
+    const count = checkboxes.length;
+    
+    document.getElementById('selectedCount').textContent = `${count} selected`;
+    document.getElementById('downloadBtn').disabled = count === 0;
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('input[data-experiment-id]');
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    
+    if (count === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+    } else if (count === allCheckboxes.length) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+    } else {
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+function selectAllExperiments() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    selectAllCheckbox.checked = !selectAllCheckbox.checked;
+    toggleSelectAll();
+}
+
+function downloadSelectedExperiments() {
+    const checkboxes = document.querySelectorAll('input[data-experiment-id]:checked');
+    const experimentIds = Array.from(checkboxes).map(cb => cb.dataset.experimentId);
+    
+    if (experimentIds.length === 0) {
+        showAlert('Please select experiments to download', 'warning');
+        return;
+    }
+    
+    const params = new URLSearchParams();
+    experimentIds.forEach(id => params.append('experiment_ids', id));
+    
+    window.location.href = `/api/experiments/download?${params.toString()}`;
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    updateSelectedCount();
+});
+</script>
+
+<style>
+.badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+tbody tr:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+</style>
+{% endblock %}
