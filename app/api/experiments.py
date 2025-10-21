@@ -8,6 +8,8 @@ import tempfile
 import os
 from app.api import bp
 from app.models.experiment import Experiment
+from app.services.experiment_service import get_experiments_service
+
 from app.models.test import Test
 from app.utils.decorators import researcher_required, test_access_required, log_access
 from app import db
@@ -22,7 +24,8 @@ def get_experiments():
     try:
         # Get query parameters
         test_id = request.args.get('test_id', type=int)
-        subject_label = request.args.get('subject_label')
+        device_id = request.args.get('device_id')
+        label = request.args.get('label')
         completion_status = request.args.get('completion_status')
         date_from = request.args.get('date_from')
         date_to = request.args.get('date_to')
@@ -44,50 +47,30 @@ def get_experiments():
             except ValueError:
                 return jsonify({'error': 'Invalid date_to format'}), 400
         
-        # Build query
-        query = Experiment.query
+        # Prepare user permissions context
+        user_permissions = {
+            'is_admin': current_user.is_admin(),
+            'assigned_test_ids': [assignment.test_id for assignment in current_user.test_assignments] if not current_user.is_admin() else []
+        }
         
-        # Filter by test access permissions
-        if current_user.is_admin():
-            # Admin can see all experiments
-            if test_id:
-                query = query.filter_by(test_id=test_id)
-        else:
-            # Researcher can only see experiments from assigned tests
-            assigned_test_ids = [test.id for test in current_user.get_assigned_tests()]
-            if test_id:
-                if test_id not in assigned_test_ids:
-                    return jsonify({'error': 'Access denied to this test'}), 403
-                query = query.filter_by(test_id=test_id)
-            else:
-                query = query.filter(Experiment.test_id.in_(assigned_test_ids))
+        # Use service to get experiments
+        success, result, error_code = get_experiments_service(
+            test_id=test_id,
+            device_id=device_id,
+            label=label,
+            completion_status=completion_status,
+            date_from=date_from_obj,
+            date_to=date_to_obj,
+            limit=limit,
+            offset=offset,
+            user_permissions=user_permissions
+        )
         
-        # Apply filters
-        if subject_label:
-            query = query.filter(Experiment.subject_label.contains(subject_label))
+        if not success:
+            return jsonify({'error': result}), error_code
         
-        if completion_status:
-            query = query.filter_by(completion_status=completion_status)
-        
-        if date_from_obj:
-            query = query.filter(Experiment.uploaded_at >= date_from_obj)
-        
-        if date_to_obj:
-            query = query.filter(Experiment.uploaded_at <= date_to_obj)
-        
-        # Get total count
-        total_count = query.count()
-        
-        # Apply pagination and ordering
-        experiments = query.order_by(db.desc(Experiment.uploaded_at)).offset(offset).limit(limit).all()
-        
-        return jsonify({
-            'experiments': [exp.to_dict() for exp in experiments],
-            'total_count': total_count,
-            'limit': limit,
-            'offset': offset
-        }), 200
-        
+        return jsonify(result), 200
+
     except Exception as e:
         logging.error(f"Get experiments error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
@@ -99,13 +82,23 @@ def get_experiments():
 def get_experiment(experiment_id):
     """Get specific experiment details"""
     try:
-        experiment = Experiment.query.get_or_404(experiment_id)
+        # Prepare user permissions context
+        user_permissions = {
+            'is_admin': current_user.is_admin(),
+            'assigned_test_ids': [assignment.test_id for assignment in current_user.test_assignments] if not current_user.is_admin() else []
+        }
         
-        # Check access permissions
-        if not current_user.has_test_access(experiment.test_id):
-            return jsonify({'error': 'Access denied'}), 403
+        # Use service to get experiment
+        from app.services.experiment_service import get_experiment_by_id_service
+        success, result, error_code = get_experiment_by_id_service(
+            experiment_id=experiment_id,
+            user_permissions=user_permissions
+        )
         
-        return jsonify(experiment.to_dict(include_trials=True)), 200
+        if not success:
+            return jsonify({'error': result}), error_code
+        
+        return jsonify(result.to_dict(include_trials=True)), 200
         
     except Exception as e:
         logging.error(f"Get experiment error: {e}")
@@ -118,12 +111,23 @@ def get_experiment(experiment_id):
 def get_experiment_trials(experiment_id):
     """Get trial data for specific experiment"""
     try:
-        experiment = Experiment.query.get_or_404(experiment_id)
+        # Prepare user permissions context
+        user_permissions = {
+            'is_admin': current_user.is_admin(),
+            'assigned_test_ids': [assignment.test_id for assignment in current_user.test_assignments] if not current_user.is_admin() else []
+        }
         
-        # Check access permissions
-        if not current_user.has_test_access(experiment.test_id):
-            return jsonify({'error': 'Access denied'}), 403
+        # Use service to get experiment (includes permission check)
+        from app.services.experiment_service import get_experiment_by_id_service
+        success, result, error_code = get_experiment_by_id_service(
+            experiment_id=experiment_id,
+            user_permissions=user_permissions
+        )
         
+        if not success:
+            return jsonify({'error': result}), error_code
+        
+        experiment = result
         trials = experiment.get_trial_data_as_dict()
         
         return jsonify({
@@ -145,6 +149,7 @@ def download_experiments():
     try:
         # Get experiment IDs from query parameters
         experiment_ids = request.args.getlist('experiment_ids')
+        format_type = request.args.get('format', 'csv')  # csv or json
         
         if not experiment_ids:
             return jsonify({'error': 'No experiment IDs provided'}), 400
@@ -155,55 +160,66 @@ def download_experiments():
         except ValueError:
             return jsonify({'error': 'Invalid experiment ID format'}), 400
         
-        # Get experiments
-        experiments = Experiment.query.filter(Experiment.id.in_(experiment_ids)).all()
+        # Prepare user permissions context
+        user_permissions = {
+            'is_admin': current_user.is_admin(),
+            'assigned_test_ids': [assignment.test_id for assignment in current_user.test_assignments] if not current_user.is_admin() else []
+        }
         
-        if not experiments:
-            return jsonify({'error': 'No experiments found'}), 404
+        # Use service to export experiment data
+        from app.services.experiment_service import export_experiment_data_service
+        success, result, error_code = export_experiment_data_service(
+            experiment_ids=experiment_ids,
+            format=format_type,
+            user_permissions=user_permissions
+        )
         
-        # Check access permissions
-        for experiment in experiments:
-            if not current_user.has_test_access(experiment.test_id):
-                return jsonify({'error': f'Access denied to experiment {experiment.id}'}), 403
+        if not success:
+            return jsonify({'error': result}), error_code
         
-        # Single experiment - return TSV file
-        if len(experiments) == 1:
-            experiment = experiments[0]
-            tsv_content = _generate_experiment_tsv(experiment)
-            
-            # Create response
-            output = io.StringIO()
-            output.write(tsv_content)
-            output.seek(0)
-            
-            filename = f"{experiment.test.name}_{experiment.subject_label}_{experiment.unique_id}.tsv"
-            
-            response = make_response(output.getvalue())
-            response.headers['Content-Type'] = 'text/tab-separated-values'
-            response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-            
-            return response
-        
-        # Multiple experiments - return ZIP file
-        else:
-            zip_buffer = io.BytesIO()
-            
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                for experiment in experiments:
-                    tsv_content = _generate_experiment_tsv(experiment)
-                    filename = f"{experiment.test.name}_{experiment.subject_label}_{experiment.unique_id}.tsv"
-                    zip_file.writestr(filename, tsv_content)
-            
-            zip_buffer.seek(0)
-            
-            response = make_response(zip_buffer.getvalue())
+        # Create response based on format
+        if format_type == 'csv':
+            response = make_response(result)
             response.headers['Content-Type'] = 'application/zip'
             response.headers['Content-Disposition'] = f'attachment; filename="experiments_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip"'
-            
-            return response
+        else:  # json
+            response = make_response(result)
+            response.headers['Content-Type'] = 'application/json'
+            response.headers['Content-Disposition'] = f'attachment; filename="experiments_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json"'
+        
+        return response
         
     except Exception as e:
         logging.error(f"Download experiments error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/experiments/<int:experiment_id>', methods=['DELETE'])
+@researcher_required
+@log_access('delete_experiment')
+def delete_experiment(experiment_id):
+    """Delete an experiment"""
+    try:
+        # Prepare user permissions context
+        user_permissions = {
+            'is_admin': current_user.is_admin(),
+            'assigned_test_ids': [assignment.test_id for assignment in current_user.test_assignments] if not current_user.is_admin() else []
+        }
+        
+        # Use service to delete experiment
+        from app.services.experiment_service import delete_experiment_service
+        success, message, error_code = delete_experiment_service(
+            experiment_id=experiment_id,
+            user_permissions=user_permissions
+        )
+        
+        if not success:
+            return jsonify({'error': message}), error_code
+        
+        return jsonify({'message': message}), 200
+        
+    except Exception as e:
+        logging.error(f"Delete experiment error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
 
@@ -236,11 +252,11 @@ def get_experiment_stats():
             db.func.count(Experiment.id).label('count')
         ).join(Experiment).filter(Test.id.in_(accessible_test_ids)).group_by(Test.name).all()
         
-        # Experiments by completion status
+        # Experiments by test status (since completion_status doesn't exist)
         experiments_by_status = db.session.query(
-            Experiment.completion_status,
+            Test.status,
             db.func.count(Experiment.id).label('count')
-        ).filter(Experiment.test_id.in_(accessible_test_ids)).group_by(Experiment.completion_status).all()
+        ).join(Experiment).filter(Test.id.in_(accessible_test_ids)).group_by(Test.status).all()
         
         # Recent experiments
         recent_experiments = Experiment.query.filter(
@@ -274,12 +290,13 @@ def _generate_experiment_tsv(experiment):
         # Write header with experiment info
         output.write(f"# Experiment: {experiment.unique_id}\n")
         output.write(f"# Test: {experiment.test.name}\n")
-        output.write(f"# Subject: {experiment.subject_label}\n")
-        output.write(f"# Age: {experiment.subject_age}\n")
+        output.write(f"# Subject: {experiment.label}\n")
+        output.write(f"# Age: {experiment.age}\n")
         output.write(f"# Gender: {experiment.get_gender_display()}\n")
         output.write(f"# Upload Date: {experiment.uploaded_at.isoformat() if experiment.uploaded_at else 'N/A'}\n")
         output.write(f"# Completion Status: {experiment.get_completion_status_display()}\n")
         output.write(f"# Device: {experiment.get_device_display()}\n")
+        output.write(f"# Device ID: {experiment.device_id or 'Not registered'}\n")
         output.write("\n")
         
         # Write trial data as TSV

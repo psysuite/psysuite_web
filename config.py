@@ -27,6 +27,9 @@ class Config:
     
     # Session settings
     PERMANENT_SESSION_LIFETIME = 3600  # 1 hour
+    
+    # API settings - reuse SECRET_KEY for API authentication
+    PSYSUITE_API_KEY = os.environ.get('PSYSUITE_API_KEY') or SECRET_KEY
 
 
 class DevelopmentConfig(Config):
@@ -43,6 +46,7 @@ class ProductionConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
+    DEBUG = False
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     WTF_CSRF_ENABLED = False
 

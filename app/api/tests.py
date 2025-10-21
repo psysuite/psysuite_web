@@ -3,7 +3,9 @@ from flask_login import current_user
 from app.api import bp
 from app.models.test import Test
 from app.models.dynamic_models import create_trial_table, drop_trial_table, update_trial_table
+from app.services.test_service import create_test_service, delete_test_service
 from app.utils.decorators import admin_required, researcher_required, log_access, validate_json
+from app.utils.api_auth import require_api_key
 from app import db
 import logging
 
@@ -57,61 +59,32 @@ def create_test():
     try:
         data = request.get_json()
         
-        # Validate required fields
+        # Extract data from request
         name = data.get('name', '').strip()
         class_name = data.get('class_name', '').strip()
+        description = data.get('description', '')
         trial_columns = data.get('trial_columns', {})
+        status = data.get('status', 'development')
         
-        if not name or not class_name:
-            return jsonify({'error': 'Name and class_name are required'}), 400
-        
-        # Check if test name already exists
-        existing_test = Test.query.filter_by(name=name).first()
-        if existing_test:
-            return jsonify({'error': 'Test name already exists'}), 400
-        
-        # Check if class name already exists
-        existing_class = Test.query.filter_by(class_name=class_name).first()
-        if existing_class:
-            return jsonify({'error': 'Test class name already exists'}), 400
-        
-        # Create test
-        test = Test(
+        # Use service to create test
+        success, result, error_code = create_test_service(
             name=name,
             class_name=class_name,
-            description=data.get('description', ''),
-            default_parameters=data.get('default_parameters', {}),
-            trial_columns=trial_columns
+            description=description,
+            trial_columns=trial_columns,
+            status=status
         )
         
-        # Validate trial columns
-        is_valid, error_msg = test.validate_trial_columns()
-        if not is_valid:
-            return jsonify({'error': error_msg}), 400
-        
-        # Validate default parameters
-        is_valid, error_msg = test.validate_default_parameters()
-        if not is_valid:
-            return jsonify({'error': error_msg}), 400
-        
-        db.session.add(test)
-        db.session.commit()
-        
-        # Create trial table
-        if not create_trial_table(test.name, trial_columns):
-            # Rollback test creation if table creation fails
-            db.session.delete(test)
-            db.session.commit()
-            return jsonify({'error': 'Failed to create trial table'}), 500
+        if not success:
+            return jsonify({'error': result}), error_code
         
         return jsonify({
             'message': 'Test created successfully',
-            'test': test.to_dict()
+            'test': result.to_dict()
         }), 201
         
     except Exception as e:
-        logging.error(f"Create test error: {e}")
-        db.session.rollback()
+        logging.error(f"Create test API error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
 
@@ -160,11 +133,7 @@ def update_test(test_id):
         is_valid, error_msg = test.validate_trial_columns()
         if not is_valid:
             return jsonify({'error': error_msg}), 400
-        
-        is_valid, error_msg = test.validate_default_parameters()
-        if not is_valid:
-            return jsonify({'error': error_msg}), 400
-        
+
         db.session.commit()
         
         # Update trial table if columns changed
@@ -189,8 +158,16 @@ def update_test(test_id):
 def delete_test(test_id):
     """Delete a test"""
     try:
-        test = Test.query.get_or_404(test_id)
-        
+        Test.query.get_or_404(test_id)
+        res = delete_test_service(test_id, True)
+
+        if res:
+            return jsonify({'message': 'Test deleted successfully'}), 200
+        else:
+            return jsonify({
+                'error': 'Cannot delete test with existing experiments. Please delete experiments first.'
+            }), 400
+
         # Check if test has experiments
         if test.get_experiment_count() > 0:
             return jsonify({
@@ -206,7 +183,7 @@ def delete_test(test_id):
         # Drop trial table
         drop_trial_table(test_name)
         
-        return jsonify({'message': 'Test deleted successfully'}), 200
+
         
     except Exception as e:
         logging.error(f"Delete test error: {e}")
@@ -277,4 +254,36 @@ def search_tests():
         
     except Exception as e:
         logging.error(f"Search tests error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@bp.route('/tests/public', methods=['GET'])
+@require_api_key
+def get_public_tests():
+    """Get available tests for PsySuite Android app (requires API key)"""
+    try:
+        # Only return tests in production status
+        tests = Test.query.filter_by(status='production').all()
+        
+        # Return simplified test data for Android app
+        test_data = []
+        for test in tests:
+            test_data.append({
+                'id': test.id,
+                'name': test.name,
+                'class_name': test.class_name,
+                'description': test.description,
+                'default_parameters': test.default_parameters,
+                'trial_columns': test.trial_columns,
+                'status': test.status,
+                'created_at': test.created_at.isoformat() if test.created_at else None
+            })
+        
+        return jsonify({
+            'tests': test_data,
+            'count': len(test_data)
+        }), 200
+        
+    except Exception as e:
+        logging.error(f"Get public tests error: {e}")
         return jsonify({'error': 'Internal server error'}), 500

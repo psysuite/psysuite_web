@@ -11,8 +11,9 @@ psycopg2-binary==2.9.7
 python-dotenv==1.0.0
 email-validator==2.0.0
 bcrypt==4.0.1
-requests==2.31.0# Te
-sting dependencies
+requests==2.31.0
+
+# Testing dependencies
 pytest==7.4.2
 pytest-cov==4.1.0
 pytest-flask==1.2.0

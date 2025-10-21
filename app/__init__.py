@@ -9,9 +9,16 @@ login_manager = LoginManager()
 migrate = Migrate()
 
 
-def create_app(config_name='default'):
+def create_app(config_name='default', skip_db_init=False):
     app = Flask(__name__)
-    app.config.from_object(config[config_name])
+    
+    # Handle both config name strings and direct config dictionaries
+    if isinstance(config_name, dict):
+        # Direct config dictionary (for testing)
+        app.config.update(config_name)
+    else:
+        # Config name string
+        app.config.from_object(config[config_name])
     
     # Initialize extensions
     db.init_app(app)
@@ -34,29 +41,30 @@ def create_app(config_name='default'):
     from app.web import bp as web_bp
     app.register_blueprint(web_bp)
     
-    # Initialize database and create default admin user
-    with app.app_context():
-        from app.models.user import User
-        from app.models.test import Test
-        from app.models.experiment import Experiment
-        from app.models.dynamic_models import initialize_existing_tests
-        
-        # Create tables
-        db.create_all()
-        
-        # Create default admin user if it doesn't exist
-        admin = User.query.filter_by(email=app.config['ADMIN_EMAIL']).first()
-        if not admin:
-            admin = User(
-                email=app.config['ADMIN_EMAIL'],
-                role='admin'
-            )
-            admin.set_password(app.config['ADMIN_PASSWORD'])
-            db.session.add(admin)
-            db.session.commit()
-        
-        # Initialize existing trial models
-        initialize_existing_tests()
+    # Initialize database and create default admin user (unless skipped)
+    if not skip_db_init:
+        with app.app_context():
+            from app.models.user import User
+            from app.models.test import Test
+            from app.models.experiment import Experiment
+            from app.models.dynamic_models import initialize_existing_tests
+            
+            # Create tables
+            db.create_all()
+            
+            # Create default admin user if it doesn't exist
+            admin = User.query.filter_by(email=app.config['ADMIN_EMAIL']).first()
+            if not admin:
+                admin = User(
+                    email=app.config['ADMIN_EMAIL'],
+                    role='admin'
+                )
+                admin.set_password(app.config['ADMIN_PASSWORD'])
+                db.session.add(admin)
+                db.session.commit()
+            
+            # Initialize existing trial models
+            initialize_existing_tests()
     
     return app
 

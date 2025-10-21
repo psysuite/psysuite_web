@@ -4,67 +4,157 @@
 
 {% block content %}
 <div class="content">
-    <h2>{{ 'Edit Test' if test else 'Create New Test' }}</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{{ 'Edit Test' if test else 'Create New Test' }}</h2>
+        <div>
+            <a href="{{ url_for('web.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-home"></i> Home
+            </a>
+        </div>
+    </div>
     
-    <form method="POST" style="max-width: 800px;">
-        <div class="form-group">
-            <label for="name">Test Name:</label>
-            <input type="text" id="name" name="name" class="form-control" 
-                   value="{{ test.name if test else '' }}" required>
+    <form method="POST">
+        <div class="row">
+            <!-- Left Column: Basic Test Information -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Test Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            <label for="name" class="form-label">Test Name *:</label>
+                            <input type="text" id="name" name="name" class="form-control" 
+                                   value="{{ test.name if test else '' }}" required
+                                   placeholder="e.g., Temporal Sequence Processing">
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="class_name" class="form-label">Class Name *:</label>
+                            <input type="text" id="class_name" name="class_name" class="form-control" 
+                                   value="{{ test.class_name if test else '' }}" required
+                                   placeholder="e.g., TestTSP">
+                            <small class="text-muted">The full Java class name for this test</small>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="description" class="form-label">Description:</label>
+                            <textarea id="description" name="description" class="form-control" rows="4" 
+                                      placeholder="Describe what this test measures...">{{ test.description if test else '' }}</textarea>
+                        </div>
+                        
+                        {% if test %}
+                        <div class="form-group mb-3">
+                            <label for="status" class="form-label">Status:</label>
+                            <select name="status" id="status" class="form-control">
+                                <option value="development" {{ 'selected' if test.status == 'development' else '' }}>Development</option>
+                                <option value="production" {{ 'selected' if test.status == 'production' else '' }}>Production</option>
+                                <option value="finalized" {{ 'selected' if test.status == 'finalized' else '' }}>Finalized</option>
+                            </select>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Trial Columns Definition -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Trial Columns</h5>
+                        <button type="button" class="btn btn-sm btn-success" onclick="addTrialColumn()">
+                            <i class="fas fa-plus"></i> Add Column
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm" id="trial-columns-table">
+                                <thead>
+                                    <tr>
+                                        <th>Column Name</th>
+                                        <th>Data Type</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trial-columns-body">
+                                    <!-- Default columns -->
+                                    <tr>
+                                        <td><input type="text" class="form-control form-control-sm" name="column_name[]" value="trial_number" readonly></td>
+                                        <td>
+                                            <select class="form-control form-control-sm" name="column_type[]" disabled>
+                                                <option value="integer" selected>Integer</option>
+                                            </select>
+                                        </td>
+                                        <td><span class="text-muted">Required</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="text" class="form-control form-control-sm" name="column_name[]" value="label" readonly></td>
+                                        <td>
+                                            <select class="form-control form-control-sm" name="column_type[]" disabled>
+                                                <option value="string" selected>String</option>
+                                            </select>
+                                        </td>
+                                        <td><span class="text-muted">Required</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <small class="text-muted">
+                            Define the columns that will store trial data. The first three columns (id, label, type) are required.
+                        </small>
+                    </div>
+                </div>
+            </div>
         </div>
         
-        <div class="form-group">
-            <label for="class_name">Test Class Name:</label>
-            <input type="text" id="class_name" name="class_name" class="form-control" 
-                   value="{{ test.class_name if test else '' }}" required
-                   placeholder="e.g., iit.uvip.psysuite.core.tests.tsp.TestTSP">
+        <!-- Action Buttons -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> {{ 'Update Test' if test else 'Create Test' }}
+                        </button>
+                        <a href="{{ url_for('web.dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                    {% if test %}
+                    <div>
+                        <a href="{{ url_for('web.test_experiments', test_id=test.id) }}" class="btn btn-info">
+                            <i class="fas fa-chart-bar"></i> View Experiments ({{ test.get_experiment_count() }})
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
         
-        <div class="form-group">
-            <label for="description">Description:</label>
-            <textarea id="description" name="description" class="form-control" rows="3">{{ test.description if test else '' }}</textarea>
-        </div>
-        
-        <div class="form-group">
-            <label for="default_parameters">Default Parameters (JSON):</label>
-            <textarea id="default_parameters" name="default_parameters" class="form-control" rows="8" 
-                      placeholder='{"nextTrailModality": -1, "whitenoise": 0, "trman_type": 0}'>{{ (test.default_parameters | tojson(indent=2)) if test and test.default_parameters else '' }}</textarea>
-            <small class="text-muted">Enter default test parameters as JSON. Leave empty if none.</small>
-        </div>
-        
-        <div class="form-group">
-            <label for="trial_columns">Trial Columns (JSON) *:</label>
-            <textarea id="trial_columns" name="trial_columns" class="form-control" rows="8" required
-                      placeholder='{"stimulus_magnitude": "float", "response_time": "integer", "user_response": "string", "correct_response": "boolean"}'>{{ (test.trial_columns | tojson(indent=2)) if test and test.trial_columns else '' }}</textarea>
-            <small class="text-muted">Define trial result columns as JSON. Valid types: integer, float, string, boolean, datetime, text</small>
-        </div>
-        
-        {% if test %}
-        <div class="form-group">
-            <label>Current Status:</label>
-            <select name="status" class="form-control">
-                <option value="development" {{ 'selected' if test.status == 'development' else '' }}>Development</option>
-                <option value="production" {{ 'selected' if test.status == 'production' else '' }}>Production</option>
-                <option value="finalized" {{ 'selected' if test.status == 'finalized' else '' }}>Finalized</option>
-            </select>
-        </div>
-        {% endif %}
-        
-        <div class="form-group">
-            <button type="submit" class="btn btn-primary">{{ 'Update Test' if test else 'Create Test' }}</button>
-            <a href="{{ url_for('web.dashboard') }}" class="btn btn-secondary">Cancel</a>
-        </div>
+        <!-- Hidden field to store trial columns JSON -->
+        <input type="hidden" id="trial_columns" name="trial_columns" value="">
     </form>
     
     {% if test %}
-    <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #dee2e6;">
-        <h3>Test Information</h3>
-        <ul>
-            <li><strong>Created:</strong> {{ test.created_at.strftime('%Y-%m-%d %H:%M:%S') if test.created_at else 'N/A' }}</li>
-            <li><strong>Last Updated:</strong> {{ test.updated_at.strftime('%Y-%m-%d %H:%M:%S') if test.updated_at else 'N/A' }}</li>
-            <li><strong>Experiments:</strong> {{ test.get_experiment_count() }}</li>
-            <li><strong>Status:</strong> {{ test.status.title() }}</li>
-        </ul>
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Test Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Created:</strong> {{ test.created_at.strftime('%Y-%m-%d %H:%M:%S') if test.created_at else 'N/A' }}</p>
+                            <p><strong>Last Updated:</strong> {{ test.updated_at.strftime('%Y-%m-%d %H:%M:%S') if test.updated_at else 'N/A' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Total Experiments:</strong> {{ test.get_experiment_count() }}</p>
+                            <p><strong>Status:</strong> <span class="badge badge-{{ 'success' if test.status == 'production' else 'warning' if test.status == 'development' else 'secondary' }}">{{ test.status.title() }}</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     {% endif %}
 </div>
@@ -72,59 +162,142 @@
 
 {% block scripts %}
 <script>
-// JSON validation and formatting
-function validateJSON(textareaId) {
-    const textarea = document.getElementById(textareaId);
-    try {
-        if (textarea.value.trim()) {
-            const parsed = JSON.parse(textarea.value);
-            textarea.value = JSON.stringify(parsed, null, 2);
-            textarea.style.borderColor = '';
+// Initialize existing trial columns if editing
+document.addEventListener('DOMContentLoaded', function() {
+    {% if test and test.trial_columns %}
+    const existingColumns = {{ test.trial_columns | tojson }};
+    loadExistingColumns(existingColumns);
+    {% endif %}
+});
+
+function loadExistingColumns(columns) {
+    const tbody = document.getElementById('trial-columns-body');
+    
+    // Skip the first 2 default columns and add the rest
+    const defaultColumns = ['id', 'label'];
+    
+    for (const [columnName, columnType] of Object.entries(columns)) {
+        if (!defaultColumns.includes(columnName)) {
+            addTrialColumnRow(columnName, columnType);
         }
-    } catch (e) {
-        textarea.style.borderColor = '#dc3545';
-        showAlert(`Invalid JSON in ${textareaId.replace('_', ' ')}: ${e.message}`, 'danger');
     }
 }
 
-document.getElementById('default_parameters').addEventListener('blur', function() {
-    validateJSON('default_parameters');
-});
+function addTrialColumn() {
+    addTrialColumnRow('', 'string');
+}
 
-document.getElementById('trial_columns').addEventListener('blur', function() {
-    validateJSON('trial_columns');
-});
-
-// Form validation
-document.querySelector('form').addEventListener('submit', function(e) {
-    const trialColumns = document.getElementById('trial_columns').value.trim();
+function addTrialColumnRow(name = '', type = 'string') {
+    const tbody = document.getElementById('trial-columns-body');
+    const row = document.createElement('tr');
     
-    if (!trialColumns) {
+    row.innerHTML = `
+        <td>
+            <input type="text" class="form-control form-control-sm" name="column_name[]" 
+                   value="${name}" placeholder="column_name" required>
+        </td>
+        <td>
+            <select class="form-control form-control-sm" name="column_type[]">
+                <option value="integer" ${type === 'integer' ? 'selected' : ''}>Integer</option>
+                <option value="bigint" ${type === 'bigint' ? 'selected' : ''}>Big Integer</option>
+                <option value="float" ${type === 'float' ? 'selected' : ''}>Float</option>
+                <option value="string" ${type === 'string' ? 'selected' : ''}>String</option>
+                <option value="boolean" ${type === 'boolean' ? 'selected' : ''}>Boolean</option>
+                <option value="datetime" ${type === 'datetime' ? 'selected' : ''}>DateTime</option>
+                <option value="text" ${type === 'text' ? 'selected' : ''}>Text</option>
+            </select>
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeTrialColumn(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    
+    tbody.appendChild(row);
+}
+
+function removeTrialColumn(button) {
+    const row = button.closest('tr');
+    row.remove();
+}
+
+// Form submission handler
+document.querySelector('form').addEventListener('submit', function(e) {
+    // Build trial columns JSON from table
+    const trialColumns = {};
+    const rows = document.querySelectorAll('#trial-columns-body tr');
+    
+    let hasError = false;
+    const columnNames = new Set();
+    
+    rows.forEach(function(row) {
+        const nameInput = row.querySelector('input[name="column_name[]"]');
+        const typeSelect = row.querySelector('select[name="column_type[]"]');
+        
+        if (nameInput && typeSelect) {
+            const columnName = nameInput.value.trim();
+            const columnType = typeSelect.value;
+            
+            if (!columnName) {
+                hasError = true;
+                nameInput.classList.add('is-invalid');
+                return;
+            } else {
+                nameInput.classList.remove('is-invalid');
+            }
+            
+            // Check for duplicate column names
+            if (columnNames.has(columnName)) {
+                hasError = true;
+                nameInput.classList.add('is-invalid');
+                showAlert(`Duplicate column name: ${columnName}`, 'danger');
+                return;
+            }
+            
+            columnNames.add(columnName);
+            trialColumns[columnName] = columnType;
+        }
+    });
+    
+    if (hasError) {
         e.preventDefault();
-        showAlert('Trial columns are required', 'danger');
         return;
     }
     
-    try {
-        const parsed = JSON.parse(trialColumns);
-        if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+    // Validate column names (alphanumeric and underscore only)
+    for (const columnName of columnNames) {
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(columnName)) {
             e.preventDefault();
-            showAlert('Trial columns must be a JSON object', 'danger');
+            showAlert(`Invalid column name "${columnName}". Use only letters, numbers, and underscores. Must start with letter or underscore.`, 'danger');
             return;
         }
-        
-        const validTypes = ['integer', 'float', 'string', 'boolean', 'datetime', 'text'];
-        for (const [key, value] of Object.entries(parsed)) {
-            if (!validTypes.includes(value)) {
-                e.preventDefault();
-                showAlert(`Invalid column type "${value}" for column "${key}". Valid types: ${validTypes.join(', ')}`, 'danger');
-                return;
-            }
-        }
-    } catch (e) {
-        e.preventDefault();
-        showAlert('Invalid JSON format in trial columns', 'danger');
     }
+    
+    // Set the hidden field value
+    document.getElementById('trial_columns').value = JSON.stringify(trialColumns);
 });
+
+// Utility function to show alerts
+function showAlert(message, type) {
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">
+            <span>&times;</span>
+        </button>
+    `;
+    
+    // Insert at top of content
+    const content = document.querySelector('.content');
+    content.insertBefore(alertDiv, content.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        alertDiv.remove();
+    }, 5000);
+}
 </script>
 {% endblock %}

@@ -27,7 +27,7 @@ def login():
         if not user or not user.check_password(password):
             # Log failed login attempt
             log_access('login_failed', f'email:{email}', request.remote_addr, request.headers.get('User-Agent'))
-            return jsonify({'error': 'Invalid email or password'}), 401
+            return jsonify({'success': False, 'message': 'Invalid email or password'}), 401
         
         if not user.is_active:
             return jsonify({'error': 'Account is disabled'}), 401

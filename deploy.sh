@@ -96,9 +96,16 @@ deploy_traditional() {
         exit 1
     fi
     
-    PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-    if [[ $(echo "$PYTHON_VERSION < 3.7" | bc -l) -eq 1 ]]; then
-        print_error "Python 3.7+ is required. Current version: $PYTHON_VERSION"
+    # Check Python version using Python itself
+    python3 -c "
+import sys
+if sys.version_info < (3, 7):
+    print('ERROR: Python 3.7+ is required. Current version: {}.{}'.format(sys.version_info.major, sys.version_info.minor))
+    exit(1)
+else:
+    print('Python version {}.{} is compatible'.format(sys.version_info.major, sys.version_info.minor))
+"
+    if [ $? -ne 0 ]; then
         exit 1
     fi
     

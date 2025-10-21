@@ -8,78 +8,73 @@ class Experiment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     unique_id = db.Column(db.String(100), unique=True, nullable=False, index=True)  # From Android app
     test_id = db.Column(db.Integer, db.ForeignKey('tests.id'), nullable=False)
+    device_id = db.Column(db.String(50), index=True)
     
-    # Subject information
-    subject_label = db.Column(db.String(50))
-    subject_age = db.Column(db.Integer)
-    subject_gender = db.Column(db.Integer)  # 0=female, 1=male, 2=other
-    subject_population = db.Column(db.Integer)
-    
-    # Test execution info
-    test_type = db.Column(db.Integer)
-    test_block = db.Column(db.Integer)
-    completion_status = db.Column(db.String(20))  # completed, aborted, etc.
-    
-    # System info (JSON)
-    device_info = db.Column(db.JSON)
-    app_version = db.Column(db.Integer)
-    stimuli_delays = db.Column(db.JSON)
+    # Subject information (main display fields)
+    label = db.Column(db.String(50))
+    age = db.Column(db.Integer)
+    gender = db.Column(db.Integer)  # 0=female, 1=male, 2=other
+    population = db.Column(db.Integer)
+    session = db.Column(db.Integer)
+    type = db.Column(db.Integer)
+    date = db.Column(db.String(50))  # Date as string from Android
+
+    # Test configuration info (single_experiment page)
+    device = db.Column(db.Text)  # Device info as JSON string
+    vercode = db.Column(db.Integer)
+    stimuli_delays = db.Column(db.Text)  # StimuliDelays as JSON string
+    whitenoise = db.Column(db.Integer)
+    trman_type = db.Column(db.Integer)
+    show_result = db.Column(db.Integer)
+    can_repeat = db.Column(db.Integer)
+    do_training = db.Column(db.Integer)
     
     # Metadata
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    experiment_date = db.Column(db.DateTime)
-    
-    # Configuration JSON (full subject parcel data)
-    configuration = db.Column(db.JSON)
     
     def __repr__(self):
         return f'<Experiment {self.unique_id}>'
     
     def get_subject_display_name(self):
         """Get a display-friendly subject identifier"""
-        if self.subject_label:
-            return f"{self.subject_label} (Age: {self.subject_age or 'N/A'})"
+        if self.label:
+            return f"{self.label} (Age: {self.age or 'N/A'})"
         return f"Subject {self.id}"
     
     def get_gender_display(self):
         """Get human-readable gender"""
         gender_map = {0: 'Female', 1: 'Male', 2: 'Other'}
-        return gender_map.get(self.subject_gender, 'Unknown')
-    
-    def get_completion_status_display(self):
-        """Get human-readable completion status"""
-        status_map = {
-            'completed': 'Completed',
-            'aborted': 'Aborted',
-            'error': 'Error',
-            'partial': 'Partially Completed'
-        }
-        return status_map.get(self.completion_status, self.completion_status or 'Unknown')
+        return gender_map.get(self.gender, 'Unknown')
     
     def get_device_display(self):
         """Get device information for display"""
-        if not self.device_info:
+        if not self.device:
             return 'Unknown Device'
         
-        manufacturer = self.device_info.get('manufacturer', '')
-        model = self.device_info.get('model', '')
-        os_version = self.device_info.get('os', '')
-        
-        parts = []
-        if manufacturer:
-            parts.append(manufacturer.title())
-        if model:
-            parts.append(model)
-        if os_version:
-            parts.append(f"Android {os_version}")
-        
-        return ' '.join(parts) if parts else 'Unknown Device'
+        try:
+            import json
+            device_info = json.loads(self.device)
+            manufacturer = device_info.get('manufacturer', '')
+            model = device_info.get('model', '')
+            os_version = device_info.get('os', '')
+            
+            parts = []
+            if manufacturer:
+                parts.append(manufacturer.title())
+            if model:
+                parts.append(model)
+            if os_version:
+                parts.append(f"Android {os_version}")
+            
+            return ' '.join(parts) if parts else 'Unknown Device'
+        except:
+            return 'Unknown Device'
     
     def get_trial_count(self):
         """Get number of trials for this experiment"""
         from app.models.dynamic_models import get_trial_model
         
-        trial_model = get_trial_model(self.test.name)
+        trial_model = get_trial_model(self.test.class_name)
         if trial_model:
             return trial_model.query.filter_by(experiment_id=self.id).count()
         return 0
@@ -88,7 +83,7 @@ class Experiment(db.Model):
         """Get all trials for this experiment"""
         from app.models.dynamic_models import get_trial_model
         
-        trial_model = get_trial_model(self.test.name)
+        trial_model = get_trial_model(self.test.class_name)
         if trial_model:
             return trial_model.query.filter_by(experiment_id=self.id).order_by('trial_number').all()
         return []
@@ -134,22 +129,25 @@ class Experiment(db.Model):
             'unique_id': self.unique_id,
             'test_id': self.test_id,
             'test_name': self.test.name if self.test else None,
-            'subject_label': self.subject_label,
-            'subject_age': self.subject_age,
-            'subject_gender': self.subject_gender,
-            'subject_gender_display': self.get_gender_display(),
-            'subject_population': self.subject_population,
-            'test_type': self.test_type,
-            'test_block': self.test_block,
-            'completion_status': self.completion_status,
-            'completion_status_display': self.get_completion_status_display(),
-            'device_info': self.device_info,
+            'label': self.label,
+            'age': self.age,
+            'gender': self.gender,
+            'gender_display': self.get_gender_display(),
+            'population': self.population,
+            'session': self.session,
+            'type': self.type,
+            'date': self.date,
+            'device': self.device,
             'device_display': self.get_device_display(),
-            'app_version': self.app_version,
+            'device_id': self.device_id,
+            'vercode': self.vercode,
             'stimuli_delays': self.stimuli_delays,
+            'whitenoise': self.whitenoise,
+            'trman_type': self.trman_type,
+            'show_result': self.show_result,
+            'can_repeat': self.can_repeat,
+            'do_training': self.do_training,
             'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None,
-            'experiment_date': self.experiment_date.isoformat() if self.experiment_date else None,
-            'configuration': self.configuration,
             'trial_count': self.get_trial_count()
         }
         
@@ -185,10 +183,9 @@ class Experiment(db.Model):
             query = query.filter_by(test_id=test_id)
         
         if subject_label:
-            query = query.filter(Experiment.subject_label.contains(subject_label))
+            query = query.filter(Experiment.label.contains(subject_label))
         
-        if completion_status:
-            query = query.filter_by(completion_status=completion_status)
+
         
         if date_from:
             query = query.filter(Experiment.uploaded_at >= date_from)
@@ -197,3 +194,11 @@ class Experiment(db.Model):
             query = query.filter(Experiment.uploaded_at <= date_to)
         
         return query.order_by(db.desc(Experiment.uploaded_at)).all()
+    
+    def get_completion_status_display(self):
+        """Get completion status display for templates"""
+        trial_count = self.get_trial_count()
+        if trial_count == 0:
+            return "No trials"
+        else:
+            return f"{trial_count} trials"

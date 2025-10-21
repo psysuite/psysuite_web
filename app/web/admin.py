@@ -21,16 +21,8 @@ def create_test():
             description = request.form.get('description', '').strip()
             
             # Parse JSON fields
-            default_parameters = {}
             trial_columns = {}
-            
-            try:
-                if request.form.get('default_parameters'):
-                    default_parameters = json.loads(request.form.get('default_parameters'))
-            except json.JSONDecodeError:
-                flash('Invalid JSON format for default parameters', 'error')
-                return render_template('admin/test_editor.html')
-            
+
             try:
                 if request.form.get('trial_columns'):
                     trial_columns = json.loads(request.form.get('trial_columns'))
@@ -56,7 +48,6 @@ def create_test():
                 name=name,
                 class_name=class_name,
                 description=description,
-                default_parameters=default_parameters,
                 trial_columns=trial_columns
             )
             

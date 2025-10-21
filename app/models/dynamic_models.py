@@ -1,24 +1,27 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, Float, String, Boolean, DateTime, ForeignKey, Text
 from app import db
+from app.models.test import Test
+import json
 
 # Registry to store dynamically created models
 _trial_models = {}
 
 
-def create_trial_model(test_name, trial_columns):
+def create_trial_model(test_classname, trial_columns):
     """
     Dynamically create a model for test-specific trial data
     
     Args:
-        test_name (str): Name of the test
+        test_name (str): class_name of the test
         trial_columns (dict): Dictionary of column_name: column_type pairs
     
     Returns:
         SQLAlchemy model class for the trial data
     """
+
     # Generate safe class and table names
-    safe_name = ''.join(c if c.isalnum() else '_' for c in test_name.lower())
+    safe_name = ''.join(c if c.isalnum() else '_' for c in test_classname.lower())
     class_name = ''.join(word.capitalize() for word in safe_name.split('_')) + 'Trial'
     table_name = f"{safe_name}_trials"
     
@@ -41,6 +44,10 @@ def create_trial_model(test_name, trial_columns):
         # Sanitize column name
         safe_col_name = ''.join(c if c.isalnum() or c == '_' else '_' for c in col_name.lower())
         
+        # Skip reserved column names
+        if safe_col_name in ['id', 'experiment_id', 'trial_number', 'created_at']:
+            continue
+        
         if col_type == 'integer':
             attrs[safe_col_name] = Column(Integer)
         elif col_type == 'float':
@@ -53,6 +60,8 @@ def create_trial_model(test_name, trial_columns):
             attrs[safe_col_name] = Column(DateTime)
         elif col_type == 'text':
             attrs[safe_col_name] = Column(Text)
+        elif col_type == 'bigint':
+            attrs[safe_col_name] = Column(db.BigInteger)
         else:
             # Default to string for unknown types
             attrs[safe_col_name] = Column(String(255))
@@ -84,7 +93,7 @@ def create_trial_model(test_name, trial_columns):
     return model_class
 
 
-def get_trial_model(test_name):
+def get_trial_model(test_classname):
     """
     Get the trial model for a specific test
     
@@ -94,7 +103,7 @@ def get_trial_model(test_name):
     Returns:
         SQLAlchemy model class or None if not found
     """
-    safe_name = ''.join(c if c.isalnum() else '_' for c in test_name.lower())
+    safe_name = ''.join(c if c.isalnum() else '_' for c in test_classname.lower())
     class_name = ''.join(word.capitalize() for word in safe_name.split('_')) + 'Trial'
     
     return _trial_models.get(class_name)
@@ -113,36 +122,34 @@ def get_trial_model_by_table_name(table_name):
     return _trial_models.get(table_name)
 
 
-def create_trial_table(test_name, trial_columns):
+def create_trial_table(test_classname, trial_columns):
     """
     Create the database table for trial data
     
     Args:
-        test_name (str): Name of the test
+        test_classname (str): class_name of the test
         trial_columns (dict): Dictionary of column_name: column_type pairs
     
     Returns:
         bool: True if table was created successfully
     """
     try:
-        model_class = create_trial_model(test_name, trial_columns)
+        model_class = create_trial_model(test_classname, trial_columns)
         
         # Create the table in the database
         model_class.__table__.create(db.engine, checkfirst=True)
         
         return True
     except Exception as e:
-        print(f"Error creating trial table for {test_name}: {e}")
+        print(f"Error creating trial table for {test_classname}: {e}")
         return False
 
 
 def drop_trial_table(test_name):
     """
     Drop the database table for trial data
-    
     Args:
         test_name (str): Name of the test
-    
     Returns:
         bool: True if table was dropped successfully
     """
@@ -169,12 +176,10 @@ def drop_trial_table(test_name):
 def update_trial_table(test_name, old_columns, new_columns):
     """
     Update the trial table structure when test configuration changes
-    
     Args:
         test_name (str): Name of the test
         old_columns (dict): Previous column configuration
         new_columns (dict): New column configuration
-    
     Returns:
         bool: True if table was updated successfully
     """
@@ -223,14 +228,27 @@ def initialize_existing_tests():
     This should be called when the application starts
     """
     try:
-        from app.models.test import Test
-        
         tests = Test.query.all()
+        initialized_count = 0
+        
         for test in tests:
             if test.trial_columns:
-                create_trial_table(test.name, test.trial_columns)
+                try:
+                    # Handle both dict and string formats
+                    if isinstance(test.trial_columns, str):
+                        trial_columns = json.loads(test.trial_columns)
+                    else:
+                        trial_columns = test.trial_columns
+                    
+                    if isinstance(trial_columns, dict):
+                        create_trial_table(test.class_name, trial_columns)
+                        initialized_count += 1
+                    else:
+                        print(f"Error creating trial table for {test.class_name}: trial_columns is not a dict")
+                except Exception as e:
+                    print(f"Error creating trial table for {test.class_name}: {e}")
         
-        print(f"Initialized {len(tests)} trial models")
+        print(f"Initialized {initialized_count} trial models")
     except Exception as e:
         print(f"Error initializing existing tests: {e}")
 

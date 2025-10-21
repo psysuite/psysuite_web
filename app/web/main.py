@@ -11,12 +11,18 @@ from app.utils.decorators import researcher_required
 @login_required
 def dashboard():
     """Main dashboard"""
+    print("DEBUG: Dashboard route accessed")
+    print(f"DEBUG: Current user: {current_user.email if current_user.is_authenticated else 'Anonymous'}")
+    
     # Get tests based on user role
     if current_user.is_admin():
+        print("DEBUG: User is admin, getting all tests")
         tests = Test.query.all()
     else:
+        print("DEBUG: User is not admin, getting assigned tests")
         tests = current_user.get_assigned_tests()
     
+    print(f"DEBUG: Found {len(tests)} tests")
     return render_template('main/dashboard.html', tests=tests)
 
 
@@ -78,3 +84,15 @@ def get_test_parameters(test_id):
         return jsonify({'error': 'Access denied'}), 403
     
     return jsonify(test.to_dict())
+
+@bp.route('/debug-test')
+def debug_test():
+    """Simple route to test PyCharm debugging"""
+    print("DEBUG: Debug test route accessed!")
+    print("DEBUG: This should appear in PyCharm console")
+    
+    # Set a breakpoint on the next line
+    message = "Breakpoint test - you should see this in console"
+    print(f"DEBUG: {message}")
+    
+    return f"<h1>Debug Test</h1><p>{message}</p>"

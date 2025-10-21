@@ -3,9 +3,8 @@ import pytest
 import tempfile
 import os
 from app import create_app, db
-from app.models.user import User, TestAssignment, AccessLog
+from app.models.user import User
 from app.models.test import Test
-from app.models.experiment import Experiment
 
 
 @pytest.fixture
@@ -16,9 +15,20 @@ def app():
     
     app = create_app({
         'TESTING': True,
+        'DEBUG': False,
         'SQLALCHEMY_DATABASE_URI': f'sqlite:///{db_path}',
+        'SQLALCHEMY_TRACK_MODIFICATIONS': False,
         'WTF_CSRF_ENABLED': False,
-        'SECRET_KEY': 'test-secret-key'
+        'SECRET_KEY': 'test-secret-key',
+        'ADMIN_EMAIL': 'admin@test.com',
+        'ADMIN_PASSWORD': 'test-admin-password',
+        'MAIL_SERVER': None,
+        'MAIL_PORT': 587,
+        'MAIL_USE_TLS': False,
+        'MAIL_USERNAME': None,
+        'MAIL_PASSWORD': None,
+        'MAX_CONTENT_LENGTH': 16 * 1024 * 1024,
+        'PERMANENT_SESSION_LIFETIME': 3600
     })
     
     with app.app_context():
@@ -36,22 +46,17 @@ def client(app):
 
 
 @pytest.fixture
-def runner(app):
-    """Create test CLI runner."""
-    return app.test_cli_runner()
-
-
-@pytest.fixture
 def admin_user(app):
     """Create admin user for testing."""
     with app.app_context():
-        user = User(
-            email='admin@test.com',
-            role='admin'
-        )
-        user.set_password('password123')
-        db.session.add(user)
-        db.session.commit()
+        # The admin user is created automatically by the app initialization
+        # Just return the existing one
+        user = User.query.filter_by(email='admin@test.com').first()
+        if not user:
+            user = User(email='admin@test.com', role='admin')
+            user.set_password('test-admin-password')
+            db.session.add(user)
+            db.session.commit()
         return user
 
 
@@ -59,10 +64,7 @@ def admin_user(app):
 def researcher_user(app):
     """Create researcher user for testing."""
     with app.app_context():
-        user = User(
-            email='researcher@test.com',
-            role='researcher'
-        )
+        user = User(email='researcher@test.com', role='researcher')
         user.set_password('password123')
         db.session.add(user)
         db.session.commit()
@@ -75,17 +77,15 @@ def sample_test(app):
     with app.app_context():
         test = Test(
             name='Sample Test',
-            class_name='iit.uvip.psysuite.core.tests.sample.TestSample',
+            class_name='TestSample',
             description='A sample test for testing',
             status='development',
-            default_parameters={
-                'param1': 10,
-                'param2': 'value'
-            },
             trial_columns={
-                'response_time': 'integer',
-                'accuracy': 'float',
-                'stimulus': 'string'
+                "trial_number": "integer",
+                "label": "string",
+                "type": "integer",
+                "response_time": "integer",
+                "response_type": "string"
             }
         )
         db.session.add(test)
@@ -97,28 +97,36 @@ def sample_test(app):
 def sample_experiment(app, sample_test):
     """Create sample experiment for testing."""
     with app.app_context():
+        # Get the test from the database to avoid DetachedInstanceError
+        test = Test.query.filter_by(name='Sample Test').first()
+        if not test:
+            test = Test(
+                name='Sample Test',
+                class_name='TestSample',
+                description='A sample test for testing',
+                status='development',
+                trial_columns={
+                    "trial_number": "integer",
+                    "label": "string",
+                    "type": "integer",
+                    "response_time": "integer",
+                    "response_type": "string"
+                }
+            )
+            db.session.add(test)
+            db.session.commit()
+        
+        from app.models.experiment import Experiment
         experiment = Experiment(
-            unique_id='exp_test_001',
-            test_id=sample_test.id,
-            subject_label='subject_001',
-            subject_age=25,
-            subject_gender=1,
-            subject_population=0,
-            test_type=240,
-            test_block=-1,
-            completion_status='completed',
-            device_info={
-                'os': '15',
-                'device': 'test_device',
-                'manufacturer': 'test_manufacturer'
-            },
-            app_version=61,
-            stimuli_delays={'a1': 0, 'a2': 0},
-            configuration={
-                'classes': ['iit.uvip.psysuite.core.tests.sample.TestSample'],
-                'label': 'subject_001',
-                'age': 25
-            }
+            test_id=test.id,
+            unique_id='TEST001_session_001',
+            device_id='test_device',
+            label='TEST001',
+            age=25,
+            gender=1,
+            population=0,
+            type=0,
+            date='2024-01-01'
         )
         db.session.add(experiment)
         db.session.commit()

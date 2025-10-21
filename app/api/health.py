@@ -5,6 +5,7 @@ from app.models.user import User
 from app.models.test import Test
 from app.models.experiment import Experiment
 from app import db
+from sqlalchemy import text
 import logging
 
 
@@ -13,7 +14,7 @@ def health_check():
     """System health check endpoint"""
     try:
         # Check database connectivity
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         # Get basic system stats
         stats = {
@@ -45,7 +46,7 @@ def system_status():
     """Detailed system status (admin only in production)"""
     try:
         # Check database connectivity
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         # Get detailed stats
         total_users = User.query.count()
