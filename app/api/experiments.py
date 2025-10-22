@@ -282,13 +282,13 @@ def _generate_experiment_tsv(experiment):
         trials = experiment.get_trial_data_as_dict()
         
         if not trials:
-            return f"# No trial data for experiment {experiment.unique_id}\n"
+            return f"# No trial data for experiment {experiment.exp_uid}\n"
         
         # Create TSV content
         output = io.StringIO()
         
         # Write header with experiment info
-        output.write(f"# Experiment: {experiment.unique_id}\n")
+        output.write(f"# Experiment: {experiment.exp_uid}\n")
         output.write(f"# Test: {experiment.test.name}\n")
         output.write(f"# Subject: {experiment.label}\n")
         output.write(f"# Age: {experiment.age}\n")
@@ -318,4 +318,4 @@ def _generate_experiment_tsv(experiment):
         
     except Exception as e:
         logging.error(f"Generate experiment TSV error: {e}")
-        return f"# Error generating TSV for experiment {experiment.unique_id}: {str(e)}\n"
+        return f"# Error generating TSV for experiment {experiment.exp_uid}: {str(e)}\n"

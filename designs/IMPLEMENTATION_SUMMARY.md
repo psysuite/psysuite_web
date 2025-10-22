@@ -228,7 +228,7 @@ gunicorn -w 4 -b 0.0.0.0:8000 run:app
 curl -X POST http://localhost:5000/api/upload/experiment \
   -H "Content-Type: application/json" \
   -d '{
-    "unique_id": "exp_123",
+    "exp_uid": "exp_123",
     "test_class_name": "iit.uvip.psysuite.core.tests.sample.TestSample",
     "configuration": {...},
     "trials": [...]

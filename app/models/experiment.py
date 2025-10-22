@@ -6,7 +6,7 @@ class Experiment(db.Model):
     __tablename__ = 'experiments'
     
     id = db.Column(db.Integer, primary_key=True)
-    unique_id = db.Column(db.String(100), unique=True, nullable=False, index=True)  # From Android app
+    exp_uid = db.Column(db.String(100), unique=True, nullable=False, index=True)  # From Android app
     test_id = db.Column(db.Integer, db.ForeignKey('tests.id'), nullable=False)
     device_id = db.Column(db.String(50), index=True)
     
@@ -33,7 +33,7 @@ class Experiment(db.Model):
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     
     def __repr__(self):
-        return f'<Experiment {self.unique_id}>'
+        return f'<Experiment {self.exp_uid}>'
     
     def get_subject_display_name(self):
         """Get a display-friendly subject identifier"""
@@ -43,7 +43,7 @@ class Experiment(db.Model):
     
     def get_gender_display(self):
         """Get human-readable gender"""
-        gender_map = {0: 'Female', 1: 'Male', 2: 'Other'}
+        gender_map = {0: 'Male', 1: 'Female', 2: 'Other'}
         return gender_map.get(self.gender, 'Unknown')
     
     def get_device_display(self):
@@ -70,6 +70,32 @@ class Experiment(db.Model):
         except:
             return 'Unknown Device'
     
+    @property
+    def subject_label(self):
+        """Get subject label, handling None values"""
+        return self.label if self.label is not None else 'N/A'
+    
+    @property
+    def subject_age(self):
+        """Get subject age, handling None values"""
+        return self.age if self.age is not None else 'N/A'
+    
+    def get_population_display(self):
+        """Get population information for display"""
+        return self.population if self.population is not None else 'N/A'
+    
+    def get_session_display(self):
+        """Get session information for display"""
+        return self.session if self.session is not None else 'N/A'
+    
+    def get_experiment_date_display(self):
+        """Get experiment date for display"""
+        return self.date if self.date else 'N/A'
+    
+    def get_device_id_display(self):
+        """Get device ID for display"""
+        return self.device_id if self.device_id else 'Not registered'
+    
     def get_trial_count(self):
         """Get number of trials for this experiment"""
         from app.models.dynamic_models import get_trial_model
@@ -85,7 +111,7 @@ class Experiment(db.Model):
         
         trial_model = get_trial_model(self.test.class_name)
         if trial_model:
-            return trial_model.query.filter_by(experiment_id=self.id).order_by('trial_number').all()
+            return trial_model.query.filter_by(experiment_id=self.id).order_by('trid').all()
         return []
     
     def get_trial_data_as_dict(self):
@@ -126,20 +152,26 @@ class Experiment(db.Model):
         """Convert experiment to dictionary for JSON serialization"""
         result = {
             'id': self.id,
-            'unique_id': self.unique_id,
+            'exp_uid': self.exp_uid,
             'test_id': self.test_id,
             'test_name': self.test.name if self.test else None,
             'label': self.label,
             'age': self.age,
+            'subject_label': self.subject_label,
+            'subject_age': self.subject_age,
             'gender': self.gender,
             'gender_display': self.get_gender_display(),
             'population': self.population,
+            'population_display': self.get_population_display(),
             'session': self.session,
+            'session_display': self.get_session_display(),
             'type': self.type,
             'date': self.date,
+            'experiment_date_display': self.get_experiment_date_display(),
             'device': self.device,
             'device_display': self.get_device_display(),
             'device_id': self.device_id,
+            'device_id_display': self.get_device_id_display(),
             'vercode': self.vercode,
             'stimuli_delays': self.stimuli_delays,
             'whitenoise': self.whitenoise,
@@ -157,9 +189,9 @@ class Experiment(db.Model):
         return result
     
     @staticmethod
-    def get_by_unique_id(unique_id):
+    def get_by_exp_uid(exp_uid):
         """Get experiment by unique ID"""
-        return Experiment.query.filter_by(unique_id=unique_id).first()
+        return Experiment.query.filter_by(exp_uid=exp_uid).first()
     
     @staticmethod
     def get_experiments_for_test(test_id, limit=None):

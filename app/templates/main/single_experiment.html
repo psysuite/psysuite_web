@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Experiment {{ experiment.unique_id }} - PsySuite Web Manager{% endblock %}
+{% block title %}Experiment {{ experiment.exp_uid }} - PsySuite Web Manager{% endblock %}
 
 {% block content %}
 <div class="content">
@@ -10,10 +10,16 @@
     <div class="experiment-info" style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
             <div>
-                <strong>Subject:</strong> {{ experiment.subject_label or 'N/A' }}
+                <strong>Subject:</strong> {{ experiment.subject_label }}
             </div>
             <div>
-                <strong>Age:</strong> {{ experiment.subject_age or 'N/A' }}
+                <strong>Age:</strong> {{ experiment.subject_age }}
+            </div>
+            <div>
+                <strong>Population:</strong> {{ experiment.get_population_display() }}
+            </div>
+            <div>
+                <strong>Session:</strong> {{ experiment.get_session_display() }}
             </div>
             <div>
                 <strong>Gender:</strong> {{ experiment.get_gender_display() }}
@@ -25,10 +31,13 @@
                 <strong>Status:</strong> {{ experiment.get_completion_status_display() }}
             </div>
             <div>
-                <strong>Upload Date:</strong> {{ experiment.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') if experiment.uploaded_at else 'N/A' }}
+                <strong>Experiment Date:</strong> {{ experiment.get_experiment_date_display() }}
             </div>
             <div>
-                <strong>Device:</strong> {{ experiment.get_device_display() }}
+                <strong>Device ID:</strong> {{ experiment.get_device_id_display() }}
+            </div>
+            <div>
+                <strong>Upload Date:</strong> {{ experiment.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') if experiment.uploaded_at else 'N/A' }}
             </div>
             <div>
                 <strong>Trials:</strong> {{ trials|length }}

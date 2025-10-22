@@ -241,7 +241,7 @@ def _export_experiments_csv(experiments):
                 # Write experiment metadata
                 exp_writer.writerow(['Experiment Metadata'])
                 exp_writer.writerow(['ID', experiment.id])
-                exp_writer.writerow(['Unique ID', experiment.unique_id])
+                exp_writer.writerow(['Unique ID', experiment.exp_uid])
                 exp_writer.writerow(['Test', experiment.test.name if experiment.test else 'Unknown'])
                 exp_writer.writerow(['Device ID', experiment.device_id])
                 exp_writer.writerow(['Subject Label', experiment.label])
@@ -273,7 +273,7 @@ def _export_experiments_csv(experiments):
                                     exp_writer.writerow(row)
                 
                 # Add to ZIP
-                filename = f'experiment_{experiment.id}_{experiment.unique_id}.csv'
+                filename = f'experiment_{experiment.id}_{experiment.exp_uid}.csv'
                 zipf.writestr(filename, exp_csv.getvalue())
         
         # Read the ZIP file data

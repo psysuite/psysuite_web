@@ -11,12 +11,12 @@ import logging
 import json
 
 
-def upload_experiment_service(unique_id, test_class_name, configuration, trials, device_id, ip_address=None, user_agent=None):
+def upload_experiment_service(exp_uid, test_class_name, configuration, trials, device_id, ip_address=None, user_agent=None):
     """
     Upload experiment data with validation and trial storage.
     
     Args:
-        unique_id (str): Unique experiment identifier
+        exp_uid (str): Unique experiment identifier
         test_class_name (str): Test class name
         configuration (dict): Experiment configuration
         trials (list): List of trial data
@@ -31,8 +31,8 @@ def upload_experiment_service(unique_id, test_class_name, configuration, trials,
     """
     try:
         # Validate required fields
-        if not unique_id or not unique_id.strip():
-            return False, 'unique_id is required', 400
+        if not exp_uid or not exp_uid.strip():
+            return False, 'exp_uid is required', 400
         
         if not test_class_name or not test_class_name.strip():
             return False, 'test_class_name is required', 400
@@ -40,7 +40,7 @@ def upload_experiment_service(unique_id, test_class_name, configuration, trials,
         if not device_id or not device_id.strip():
             return False, 'device_id is required', 400
         
-        unique_id = unique_id.strip()
+        exp_uid = exp_uid.strip()
         test_class_name = test_class_name.strip()
         device_id = device_id.strip()
         
@@ -52,9 +52,9 @@ def upload_experiment_service(unique_id, test_class_name, configuration, trials,
             return False, 'trials must be a list', 400
         
         # Check for duplicate experiment
-        existing_experiment = Experiment.get_by_unique_id(unique_id)
+        existing_experiment = Experiment.get_by_exp_uid(exp_uid)
         if existing_experiment:
-            return False, f'Experiment with unique_id "{unique_id}" already exists', 409
+            return False, f'Experiment with exp_uid "{exp_uid}" already exists', 409
         
         # Find test by class name
         test = Test.get_by_class_name(test_class_name)
@@ -71,7 +71,7 @@ def upload_experiment_service(unique_id, test_class_name, configuration, trials,
             return False, f'Invalid configuration: {error_msg}', 400
         
         # Log experiment upload for debugging
-        logging.info(f"Experiment upload - ID: {unique_id}, Test: {test_class_name}")
+        logging.info(f"Experiment upload - ID: {exp_uid}, Test: {test_class_name}")
         logging.debug(f"Configuration fields: {list(configuration.keys())}")
         
         # Helper function to convert boolean to integer
@@ -94,7 +94,7 @@ def upload_experiment_service(unique_id, test_class_name, configuration, trials,
         
         # Create experiment record
         experiment = Experiment(
-            unique_id=unique_id,
+            exp_uid=exp_uid,
             test_id=test.id,
             device_id=device_id,
             
@@ -138,11 +138,11 @@ def upload_experiment_service(unique_id, test_class_name, configuration, trials,
                 # Create trial record
                 trial_record = trial_model(
                     experiment_id=experiment.id,
-                    trial_number=trial_data.get('trial_number', i + 1)
+                    trid=trial_data.get('trid', i + 1)
                 )
                 
                 # Add trial data fields (skip reserved field names)
-                reserved_fields = ['id', 'experiment_id', 'trial_number', 'created_at']
+                reserved_fields = ['id', 'experiment_id', 'trid', 'created_at']
                 for field_name, field_value in trial_data.items():
                     if field_name not in reserved_fields and hasattr(trial_record, field_name):
                         setattr(trial_record, field_name, field_value)
@@ -158,7 +158,7 @@ def upload_experiment_service(unique_id, test_class_name, configuration, trials,
         return True, {
             'message': 'Experiment uploaded successfully',
             'experiment_id': experiment.id,
-            'unique_id': experiment.unique_id,
+            'exp_uid': experiment.exp_uid,
             'device_id': experiment.device_id,
             'trial_count': trial_count
         }, None
@@ -313,7 +313,7 @@ def _log_experiment_upload(experiment, ip_address, user_agent):
         access_log = AccessLog(
             user_id=user_id,
             action='experiment_upload',
-            resource=f'experiment:{experiment.unique_id}',
+            resource=f'experiment:{experiment.exp_uid}',
             ip_address=ip_address,
             user_agent=user_agent
         )

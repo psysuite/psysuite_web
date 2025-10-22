@@ -754,7 +754,7 @@ def upload_experiment():
         
         # Create experiment with device ID
         experiment = Experiment(
-            unique_id=data['unique_id'],
+            exp_uid=data['exp_uid'],
             test_id=test.id,
             device_id=device_id,
             # ... other fields ...
@@ -977,7 +977,7 @@ ultsManager Integration Updates
 ```kotlin
 // Updated data classes for upload with device ID support
 data class ExperimentUploadData(
-    val uniqueId: String,
+    val exp_uid: String,
     val testClassName: String,
     val configuration: JSONObject,
     val trials: List<TrialData>,
@@ -995,14 +995,14 @@ data class TrialData(
 ```kotlin
 // Updated JSON payload creation in doUploadExperiment
 val payload = JSONObject().apply {
-    put("unique_id", experimentData.uniqueId)
+    put("exp_uid", experimentData.exp_uid)
     put("test_class_name", experimentData.testClassName)
     put("device_id", experimentData.deviceId) // Include device ID
     put("configuration", experimentData.configuration)
     put("trials", JSONArray().apply {
         experimentData.trials.forEach { trial ->
             put(JSONObject().apply {
-                put("trial_number", trial.trialNumber)
+                put("trid", trial.trialNumber)
                 trial.data.forEach { (key, value) ->
                     put(key, value)
                 }
