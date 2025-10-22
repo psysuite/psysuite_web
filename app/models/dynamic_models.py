@@ -35,7 +35,7 @@ def create_trial_model(test_classname, trial_columns):
         '__table_args__': {'extend_existing': True},
         'id': Column(Integer, primary_key=True),
         'experiment_id': Column(Integer, ForeignKey('experiments.id'), nullable=False),
-        'trial_number': Column(Integer, nullable=False),
+        'trid': Column(Integer, nullable=False),
         'created_at': Column(DateTime, default=datetime.utcnow),
     }
     
@@ -45,7 +45,7 @@ def create_trial_model(test_classname, trial_columns):
         safe_col_name = ''.join(c if c.isalnum() or c == '_' else '_' for c in col_name.lower())
         
         # Skip reserved column names
-        if safe_col_name in ['id', 'experiment_id', 'trial_number', 'created_at']:
+        if safe_col_name in ['id', 'experiment_id', 'trid', 'created_at']:
             continue
         
         if col_type == 'integer':
@@ -68,7 +68,7 @@ def create_trial_model(test_classname, trial_columns):
     
     # Add methods to the model
     def __repr__(self):
-        return f'<{class_name} experiment_id={self.experiment_id} trial_number={self.trial_number}>'
+        return f'<{class_name} experiment_id={self.experiment_id} trid={self.trid}>'
     
     def to_dict(self):
         """Convert trial to dictionary for JSON serialization"""

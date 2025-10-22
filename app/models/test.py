@@ -17,6 +17,7 @@ class Test(db.Model):
     
     # JSON fields for flexible configuration
     _trial_columns = db.Column('trial_columns', db.JSON)       # Trial result column definitions
+    trial_columns_order = db.Column(db.JSON)                   # Array of column names in creation order
     
     @property
     def trial_columns(self):
@@ -46,6 +47,29 @@ class Test(db.Model):
                 self._trial_columns = {}
         else:
             self._trial_columns = {}
+    
+    @property
+    def ordered_trial_columns(self):
+        """Get trial columns in original creation order"""
+        if not self.trial_columns:
+            return {}
+        
+        if not self.trial_columns_order:
+            # Fallback to current order if no order is stored
+            return self.trial_columns
+        
+        ordered_dict = {}
+        # Add columns in the specified order
+        for column_name in self.trial_columns_order:
+            if column_name in self.trial_columns:
+                ordered_dict[column_name] = self.trial_columns[column_name]
+        
+        # Add any missing columns at the end (in case of data inconsistency)
+        for column_name, column_type in self.trial_columns.items():
+            if column_name not in ordered_dict:
+                ordered_dict[column_name] = column_type
+        
+        return ordered_dict
     
     # Relationships
     experiments = db.relationship('Experiment', backref='test', lazy='dynamic', cascade='all, delete-orphan')

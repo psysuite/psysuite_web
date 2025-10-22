@@ -22,11 +22,13 @@
                 </th>
                 <th>Subject</th>
                 <th>Age</th>
+                <th>Population</th>
+                <th>Session</th>
                 <th>Gender</th>
                 <th>Status</th>
                 <th>Trials</th>
-                <th>Upload Date</th>
-                <th>Device</th>
+                <th>Experiment Date</th>
+                <th>Device ID</th>
             </tr>
         </thead>
         <tbody>
@@ -35,8 +37,10 @@
                 <td>
                     <input type="checkbox" data-experiment-id="{{ experiment.id }}" onchange="updateSelectedCount()">
                 </td>
-                <td>{{ experiment.subject_label or 'N/A' }}</td>
-                <td>{{ experiment.subject_age or 'N/A' }}</td>
+                <td>{{ experiment.subject_label }}</td>
+                <td>{{ experiment.subject_age }}</td>
+                <td>{{ experiment.get_population_display() }}</td>
+                <td>{{ experiment.get_session_display() }}</td>
                 <td>{{ experiment.get_gender_display() }}</td>
                 <td>
                     <span class="badge badge-{{ 'success' if experiment.completion_status == 'completed' else 'warning' }}">
@@ -44,8 +48,8 @@
                     </span>
                 </td>
                 <td>{{ experiment.get_trial_count() }}</td>
-                <td>{{ experiment.uploaded_at.strftime('%Y-%m-%d %H:%M') if experiment.uploaded_at else 'N/A' }}</td>
-                <td>{{ experiment.get_device_display() }}</td>
+                <td>{{ experiment.get_experiment_date_display() }}</td>
+                <td>{{ experiment.get_device_id_display() }}</td>
             </tr>
             {% endfor %}
         </tbody>

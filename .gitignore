@@ -63,10 +63,9 @@ ehthumbs.db
 Thumbs.db
 
 # Development files (should not be in production)
-scripts/dev/
+scripts/db/
 scripts/tests/
 debug.py
-test_*.py
 *_test.py
 
 # Temporary files
@@ -83,3 +82,4 @@ test_*.py
 *.bak
 *.backup
 data_export*.json
+

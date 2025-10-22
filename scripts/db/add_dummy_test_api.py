@@ -41,7 +41,7 @@ def add_dummy_test_via_api():
                 'description': 'this is a dummy test',
                 'status': 'development',
                 'trial_columns': {
-                    "trial_number": "integer",
+                    "trid": "integer",
                     "label": "string", 
                     "type": "integer",
                     "response_time": "integer",

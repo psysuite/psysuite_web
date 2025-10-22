@@ -81,7 +81,7 @@ def sample_test(app):
             description='A sample test for testing',
             status='development',
             trial_columns={
-                "trial_number": "integer",
+                "trid": "integer",
                 "label": "string",
                 "type": "integer",
                 "response_time": "integer",
@@ -106,7 +106,7 @@ def sample_experiment(app, sample_test):
                 description='A sample test for testing',
                 status='development',
                 trial_columns={
-                    "trial_number": "integer",
+                    "trid": "integer",
                     "label": "string",
                     "type": "integer",
                     "response_time": "integer",
@@ -119,7 +119,7 @@ def sample_experiment(app, sample_test):
         from app.models.experiment import Experiment
         experiment = Experiment(
             test_id=test.id,
-            unique_id='TEST001_session_001',
+            exp_uid='TEST001_session_001',
             device_id='test_device',
             label='TEST001',
             age=25,

@@ -8,14 +8,14 @@ import logging
 
 @bp.route('/upload/experiment', methods=['POST'])
 @require_api_key
-@validate_json(['unique_id', 'test_class_name', 'configuration', 'trials'])
+@validate_json(['exp_uid', 'test_class_name', 'configuration', 'trials'])
 def upload_experiment():
     """Upload experiment data from Android app"""
     try:
         data = request.get_json()
 
         # Extract fields
-        unique_id = data.get('unique_id', '')
+        exp_uid = data.get('exp_uid', '')
         test_class_name = data.get('test_class_name', '')
         configuration = data.get('configuration', {})
         trials = data.get('trials', [])
@@ -23,7 +23,7 @@ def upload_experiment():
 
         # Use service to upload experiment
         success, result, error_code = upload_experiment_service(
-            unique_id=unique_id,
+            exp_uid=exp_uid,
             test_class_name=test_class_name,
             configuration=configuration,
             trials=trials,

@@ -83,7 +83,14 @@ def get_test_parameters(test_id):
     if not current_user.has_test_access(test_id):
         return jsonify({'error': 'Access denied'}), 403
     
-    return jsonify(test.to_dict())
+    # Get the basic test data
+    test_data = test.to_dict()
+    
+    # Replace trial_columns with ordered version and include order information
+    test_data['trial_columns'] = test.ordered_trial_columns
+    test_data['trial_columns_order'] = test.trial_columns_order
+    
+    return jsonify(test_data)
 
 @bp.route('/debug-test')
 def debug_test():

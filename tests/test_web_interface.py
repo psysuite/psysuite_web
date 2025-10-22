@@ -103,7 +103,7 @@ class TestWebInterface:
             
             experiment = Experiment(
                 test_id=test.id,
-                unique_id='TEST001_session_001',
+                exp_uid='TEST001_session_001',
                 device_id='test_device',
                 label='TEST001',
                 age=25,
@@ -150,7 +150,7 @@ class TestWebInterface:
             
             experiment = Experiment(
                 test_id=test.id,
-                unique_id='DETAIL001_detail_session',
+                exp_uid='DETAIL001_detail_session',
                 device_id='detail_device',
                 label='DETAIL001',
                 age=30,
