@@ -118,6 +118,11 @@ def upload_experiment_service(exp_uid, test_class_name, configuration, trials, d
             do_training=bool_to_int(configuration.get('doTraining'))
         )
         
+        # Set project information
+        project_name = configuration.get('project')
+        if project_name:
+            experiment.set_project_by_name(project_name)
+        
         db.session.add(experiment)
         db.session.flush()  # Get experiment ID
         
@@ -282,6 +287,11 @@ def _validate_configuration(configuration):
             gender = configuration.get('gender')
             if gender is not None and (not isinstance(gender, int) or gender not in [0, 1, 2]):
                 return False, 'Gender must be 0 (female), 1 (male), or 2 (other)'
+        
+        if 'project' in configuration:
+            project = configuration.get('project')
+            if project is not None and (not isinstance(project, str) or len(project.strip()) > 100):
+                return False, 'Project must be a string with maximum 100 characters'
         
         return True, None
         

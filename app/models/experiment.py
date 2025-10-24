@@ -10,6 +10,10 @@ class Experiment(db.Model):
     test_id = db.Column(db.Integer, db.ForeignKey('tests.id'), nullable=False)
     device_id = db.Column(db.String(50), index=True)
     
+    # Project relationship
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=True, index=True)
+    project_name = db.Column(db.String(100), index=True)  # Denormalized for performance
+    
     # Subject information (main display fields)
     label = db.Column(db.String(50))
     age = db.Column(db.Integer)
@@ -31,6 +35,9 @@ class Experiment(db.Model):
     
     # Metadata
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Relationships
+    project = db.relationship('Project', backref='experiments', lazy=True)
     
     def __repr__(self):
         return f'<Experiment {self.exp_uid}>'
@@ -95,6 +102,19 @@ class Experiment(db.Model):
     def get_device_id_display(self):
         """Get device ID for display"""
         return self.device_id if self.device_id else 'Not registered'
+    
+    def get_project_display(self):
+        """Get project name for display"""
+        if self.project_name:
+            return self.project_name
+        elif self.project:
+            return self.project.name
+        else:
+            return 'No Project'
+    
+    def get_project_name(self):
+        """Get project name, handling None values"""
+        return self.project_name if self.project_name else 'No Project'
     
     def get_trial_count(self):
         """Get number of trials for this experiment"""
@@ -172,6 +192,9 @@ class Experiment(db.Model):
             'device_display': self.get_device_display(),
             'device_id': self.device_id,
             'device_id_display': self.get_device_id_display(),
+            'project_id': self.project_id,
+            'project_name': self.project_name,
+            'project_display': self.get_project_display(),
             'vercode': self.vercode,
             'stimuli_delays': self.stimuli_delays,
             'whitenoise': self.whitenoise,
@@ -207,7 +230,7 @@ class Experiment(db.Model):
         return Experiment.query.order_by(db.desc(Experiment.uploaded_at)).limit(limit).all()
     
     @staticmethod
-    def search_experiments(test_id=None, subject_label=None, completion_status=None, date_from=None, date_to=None):
+    def search_experiments(test_id=None, subject_label=None, project_id=None, completion_status=None, date_from=None, date_to=None):
         """Search experiments with various filters"""
         query = Experiment.query
         
@@ -217,7 +240,8 @@ class Experiment(db.Model):
         if subject_label:
             query = query.filter(Experiment.label.contains(subject_label))
         
-
+        if project_id:
+            query = query.filter_by(project_id=project_id)
         
         if date_from:
             query = query.filter(Experiment.uploaded_at >= date_from)
@@ -234,3 +258,55 @@ class Experiment(db.Model):
             return "No trials"
         else:
             return f"{trial_count} trials"
+    
+    def set_project(self, project):
+        """Set project for this experiment"""
+        if project:
+            self.project_id = project.id
+            self.project_name = project.name
+        else:
+            self.project_id = None
+            self.project_name = None
+    
+    def set_project_by_name(self, project_name):
+        """Set project by name, creating project reference if it exists"""
+        from app.models.project import Project
+        
+        if not project_name or project_name.lower() in ['no project', 'n.a.', '']:
+            self.project_id = None
+            self.project_name = 'No Project'
+            return
+        
+        # Try to find existing project
+        project = Project.get_project_by_name(project_name)
+        if project:
+            self.project_id = project.id
+            self.project_name = project.name
+        else:
+            # Store the name even if project doesn't exist in database
+            self.project_id = None
+            self.project_name = project_name
+    
+    @staticmethod
+    def get_experiments_by_project(project_id, limit=None):
+        """Get experiments for a specific project"""
+        query = Experiment.query.filter_by(project_id=project_id).order_by(db.desc(Experiment.uploaded_at))
+        if limit:
+            query = query.limit(limit)
+        return query.all()
+    
+    @staticmethod
+    def get_project_statistics():
+        """Get statistics about experiments by project"""
+        from sqlalchemy import func
+        from app.models.project import Project
+        
+        # Get counts by project_name (including those without project_id)
+        stats = db.session.query(
+            Experiment.project_name,
+            func.count(Experiment.id).label('count')
+        ).group_by(Experiment.project_name).order_by(
+            func.count(Experiment.id).desc()
+        ).all()
+        
+        return [(name or 'No Project', count) for name, count in stats]

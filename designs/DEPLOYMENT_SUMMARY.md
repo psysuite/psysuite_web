@@ -148,7 +148,7 @@ Update your Android app to point to the web backend:
 
 ```kotlin
 // In ResultsManager or configuration
-private val webApiUrl = "https://your-domain.com/api"
+private val webApiUrl = "https://your-domain.com"
 ```
 
 ---

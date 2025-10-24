@@ -17,6 +17,9 @@
       <assistant-state connection-id="e07cda15-1999-4fd7-b6d4-357d74db9b0d" default-profile-name="" selected-conversation-id="" assistant-type="GENERIC" availability="UNAVAILABLE" acknowledgement="NONE">
         <conversations />
       </assistant-state>
+      <assistant-state connection-id="4b07c227-b2fe-4706-b69e-e24eeb02bd6a" default-profile-name="" selected-conversation-id="" assistant-type="GENERIC" availability="UNAVAILABLE" acknowledgement="NONE">
+        <conversations />
+      </assistant-state>
     </assistants>
   </component>
   <component name="DBNavigator.Project.DatabaseBrowserManager">
@@ -34,13 +37,19 @@
     <last-used-providers />
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">
-    <open-files />
+    <open-files>
+      <object connection-id="4b07c227-b2fe-4706-b69e-e24eeb02bd6a" object-ref="schemas/public/tables/experiments" />
+    </open-files>
   </component>
   <component name="DBNavigator.Project.DatabaseSessionManager">
-    <connection id="b34a6c74-7928-4a69-b8f6-6c2f1cce31ba" />
+    <connection id="4b07c227-b2fe-4706-b69e-e24eeb02bd6a" />
   </component>
   <component name="DBNavigator.Project.DatasetFilterManager">
-    <filter-actions connection-id="b34a6c74-7928-4a69-b8f6-6c2f1cce31ba" dataset="app-dev.testbis_trials" active-filter-id="" />
+    <filter-actions connection-id="4b07c227-b2fe-4706-b69e-e24eeb02bd6a" dataset="public.experiments" active-filter-id="1fac3bc5-a538-4954-afc6-2c51171d1660">
+      <filter id="1fac3bc5-a538-4954-afc6-2c51171d1660" name="&quot;&quot;" temporary="false" custom-name="false" type="basic" join-type="AND">
+        <condition column="id" operator="=" value="&quot;&quot;" active="true" />
+      </filter>
+    </filter-actions>
   </component>
   <component name="DBNavigator.Project.ExecutionManager">
     <retain-sticky-names value="false" />
