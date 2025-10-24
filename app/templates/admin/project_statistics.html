@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Project Statistics - PsySuite Web Manager{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="header-section">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('projects.manage_projects') }}">Projects</a>
+                </li>
+                <li class="breadcrumb-item active">Statistics</li>
+            </ol>
+        </nav>
+        
+        <h2>Project Statistics</h2>
+        <p class="text-muted">Overview of experiments by project</p>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-folder fa-2x text-primary mb-2"></i>
+                    <h4 class="card-title">{{ stats|length }}</h4>
+                    <p class="card-text text-muted">Total Projects</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-flask fa-2x text-success mb-2"></i>
+                    <h4 class="card-title">{{ total_experiments }}</h4>
+                    <p class="card-text text-muted">Total Experiments</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                    <h4 class="card-title">
+                        {% if stats|length > 0 %}
+                            {{ "%.1f"|format(total_experiments / stats|length) }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h4>
+                    <p class="card-text text-muted">Avg per Project</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-star fa-2x text-warning mb-2"></i>
+                    <h4 class="card-title">
+                        {% if stats %}
+                            {{ stats[0][1] }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h4>
+                    <p class="card-text text-muted">Most Active</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Statistics Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Experiments by Project</h5>
+        </div>
+        <div class="card-body">
+            {% if stats %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Project Name</th>
+                            <th>Experiments</th>
+                            <th>Percentage</th>
+                            <th>Progress Bar</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project_name, count in stats %}
+                        {% set percentage = (count / total_experiments * 100) if total_experiments > 0 else 0 %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-secondary">{{ loop.index }}</span>
+                            </td>
+                            <td>
+                                <strong>{{ project_name }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">{{ count }}</span>
+                            </td>
+                            <td>
+                                {{ "%.1f"|format(percentage) }}%
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: {{ percentage }}%"
+                                         aria-valuenow="{{ percentage }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if project_name != 'No Project' %}
+                                <a href="{{ url_for('web.experiments') }}?project={{ project_name|urlencode }}" 
+                                   class="btn btn-sm btn-outline-primary" title="View experiments">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% else %}
+                                <a href="{{ url_for('web.experiments') }}?project=none" 
+                                   class="btn btn-sm btn-outline-secondary" title="View unassigned experiments">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No Statistics Available</h5>
+                <p class="text-muted">No experiments have been uploaded yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-arrow-left fa-2x text-secondary mb-2"></i>
+                    <h6>Back to Projects</h6>
+                    <a href="{{ url_for('projects.manage_projects') }}" class="btn btn-outline-secondary btn-sm">
+                        Manage Projects
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-flask fa-2x text-success mb-2"></i>
+                    <h6>All Experiments</h6>
+                    <a href="{{ url_for('web.experiments') }}" class="btn btn-outline-success btn-sm">
+                        View Experiments
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-download fa-2x text-info mb-2"></i>
+                    <h6>Export Statistics</h6>
+                    <button class="btn btn-outline-info btn-sm" onclick="exportStatistics()">
+                        Export CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function exportStatistics() {
+    // Create CSV content
+    let csvContent = "Project Name,Experiments,Percentage\n";
+    
+    {% for project_name, count in stats %}
+    {% set percentage = (count / total_experiments * 100) if total_experiments > 0 else 0 %}
+    csvContent += "{{ project_name|replace('"', '""') }},{{ count }},{{ "%.1f"|format(percentage) }}\n";
+    {% endfor %}
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'project_statistics.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+</script>
+
+<style>
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 1rem;
+}
+
+.header-section {
+    margin-bottom: 2rem;
+}
+
+.card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    background-color: #007bff;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

@@ -41,12 +41,16 @@ def create_app(config_name='default', skip_db_init=False):
     from app.web import bp as web_bp
     app.register_blueprint(web_bp)
     
+    from app.web.project_routes import project_bp
+    app.register_blueprint(project_bp)
+    
     # Initialize database and create default admin user (unless skipped)
     if not skip_db_init:
         with app.app_context():
             from app.models.user import User
             from app.models.test import Test
             from app.models.experiment import Experiment
+            from app.models.project import Project
             from app.models.dynamic_models import initialize_existing_tests
             
             # Create tables

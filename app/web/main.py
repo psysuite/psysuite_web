@@ -4,6 +4,7 @@ from app.web import bp
 from app.models.test import Test
 from app.models.experiment import Experiment
 from app.utils.decorators import researcher_required
+from app import db
 
 
 @bp.route('/')
@@ -40,17 +41,46 @@ def test_experiments(test_id):
     
     # Get query parameters for filtering
     page = request.args.get('page', 1, type=int)
+    project_filter = request.args.get('project', '')
     per_page = 20
     
-    # Get experiments with pagination
-    experiments_query = Experiment.query.filter_by(test_id=test_id).order_by(Experiment.uploaded_at.desc())
+    # Build experiments query with project filtering
+    experiments_query = Experiment.query.filter_by(test_id=test_id)
+    
+    # Apply project filter if specified
+    if project_filter:
+        if project_filter.lower() == 'none':
+            # Show experiments with no project
+            experiments_query = experiments_query.filter(
+                (Experiment.project_name is None) |
+                (Experiment.project_name == '') |
+                (Experiment.project_name == 'No Project')
+            )
+        else:
+            # Show experiments for specific project
+            experiments_query = experiments_query.filter(Experiment.project_name == project_filter)
+    
+    experiments_query = experiments_query.order_by(Experiment.uploaded_at.desc())
     experiments = experiments_query.paginate(
         page=page, per_page=per_page, error_out=False
     )
     
+    # Get available projects for the filter dropdown
+    from app.models.project import Project
+    available_projects = Project.get_all_projects()
+    
+    # Get project statistics for this test
+    project_stats = Experiment.query.filter_by(test_id=test_id).with_entities(
+        Experiment.project_name,
+        db.func.count(Experiment.id).label('count')
+    ).group_by(Experiment.project_name).all()
+    
     return render_template('main/test_experiments.html', 
                          test=test, 
-                         experiments=experiments)
+                         experiments=experiments,
+                         available_projects=available_projects,
+                         project_stats=project_stats,
+                         current_project_filter=project_filter)
 
 
 @bp.route('/experiment/<int:experiment_id>')

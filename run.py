@@ -3,13 +3,14 @@ from app import create_app, db
 from app.models.user import User
 from app.models.test import Test
 from app.models.experiment import Experiment
+from app.models.project import Project
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 
 
 @app.shell_context_processor
 def make_shell_context():
-    return {'db': db, 'User': User, 'Test': Test, 'Experiment': Experiment}
+    return {'db': db, 'User': User, 'Test': Test, 'Experiment': Experiment, 'Project': Project}
 
 
 if __name__ == '__main__':
