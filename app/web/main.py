@@ -46,7 +46,7 @@ def test_experiments(test_id):
     
     # Build experiments query with project filtering
     experiments_query = Experiment.query.filter_by(test_id=test_id)
-    
+
     # Apply project filter if specified
     if project_filter:
         if project_filter.lower() == 'none':
@@ -59,7 +59,7 @@ def test_experiments(test_id):
         else:
             # Show experiments for specific project
             experiments_query = experiments_query.filter(Experiment.project_name == project_filter)
-    
+
     experiments_query = experiments_query.order_by(Experiment.uploaded_at.desc())
     experiments = experiments_query.paginate(
         page=page, per_page=per_page, error_out=False
@@ -68,14 +68,14 @@ def test_experiments(test_id):
     # Get available projects for the filter dropdown
     from app.models.project import Project
     available_projects = Project.get_all_projects()
-    
+
     # Get project statistics for this test
     project_stats = Experiment.query.filter_by(test_id=test_id).with_entities(
         Experiment.project_name,
         db.func.count(Experiment.id).label('count')
     ).group_by(Experiment.project_name).all()
-    
-    return render_template('main/test_experiments.html', 
+
+    return render_template('main/test_experiments.html',
                          test=test, 
                          experiments=experiments,
                          available_projects=available_projects,
