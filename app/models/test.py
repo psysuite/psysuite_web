@@ -73,7 +73,6 @@ class Test(db.Model):
     
     # Relationships
     experiments = db.relationship('Experiment', backref='test', lazy='dynamic', cascade='all, delete-orphan')
-    assignments = db.relationship('TestAssignment', backref='test', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<Test {self.name}>'

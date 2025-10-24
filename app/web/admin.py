@@ -2,7 +2,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app.web import bp
 from app.models.test import Test
-from app.models.user import User, TestAssignment
+from app.models.user import User
 from app.models.dynamic_models import create_trial_table, drop_trial_table
 from app.utils.decorators import admin_required
 from app import db
@@ -89,17 +89,16 @@ def edit_test(test_id):
             name = request.form.get('name', '').strip()
             class_name = request.form.get('class_name', '').strip()
             description = request.form.get('description', '').strip()
+            status = request.form.get('status', 'development')
+            
+            # Validate status
+            valid_statuses = ['development', 'production', 'finalized']
+            if status not in valid_statuses:
+                flash(f'Invalid status. Must be one of: {", ".join(valid_statuses)}', 'error')
+                return render_template('admin/test_editor.html', test=test)
             
             # Parse JSON fields
-            default_parameters = {}
             trial_columns = {}
-            
-            try:
-                if request.form.get('default_parameters'):
-                    default_parameters = json.loads(request.form.get('default_parameters'))
-            except json.JSONDecodeError:
-                flash('Invalid JSON format for default parameters', 'error')
-                return render_template('admin/test_editor.html', test=test)
             
             try:
                 if request.form.get('trial_columns'):
@@ -127,7 +126,7 @@ def edit_test(test_id):
             test.name = name
             test.class_name = class_name
             test.description = description
-            test.default_parameters = default_parameters
+            test.status = status
             test.trial_columns = trial_columns
             
             # Validate
@@ -210,44 +209,5 @@ def create_user():
     return render_template('admin/user_editor.html')
 
 
-@bp.route('/admin/user/<int:user_id>/assign-tests', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def assign_tests(user_id):
-    """Assign tests to user"""
-    user = User.query.get_or_404(user_id)
-    
-    if user.is_admin():
-        flash('Admin users have access to all tests automatically', 'info')
-        return redirect(url_for('web.users'))
-    
-    if request.method == 'POST':
-        try:
-            test_ids = request.form.getlist('test_ids')
-            test_ids = [int(id) for id in test_ids if id.isdigit()]
-            
-            # Remove existing assignments
-            TestAssignment.query.filter_by(user_id=user_id).delete()
-            
-            # Add new assignments
-            for test_id in test_ids:
-                if Test.query.get(test_id):  # Verify test exists
-                    assignment = TestAssignment(user_id=user_id, test_id=test_id)
-                    db.session.add(assignment)
-            
-            db.session.commit()
-            flash('Test assignments updated successfully', 'success')
-            return redirect(url_for('web.users'))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error updating assignments: {str(e)}', 'error')
-    
-    # Get current assignments
-    current_assignments = [a.test_id for a in user.test_assignments]
-    all_tests = Test.query.all()
-    
-    return render_template('admin/assign_tests.html', 
-                         user=user, 
-                         all_tests=all_tests, 
-                         current_assignments=current_assignments)
+
+

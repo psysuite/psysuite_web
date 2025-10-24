@@ -88,7 +88,7 @@ class Project(db.Model):
             
             # Update denormalized project_name in experiments table
             from app.models.experiment import Experiment
-            experiments = Experiment.query.filter_by(project_id=self.id).all()
+            experiments = Experiment.query.filter_by(project_name=old_name).all()
             for exp in experiments:
                 exp.project_name = self.name
             db.session.commit()
@@ -103,13 +103,12 @@ class Project(db.Model):
         try:
             # Check if there are experiments using this project
             from app.models.experiment import Experiment
-            experiment_count = Experiment.query.filter_by(project_id=self.id).count()
+            experiment_count = Experiment.query.filter_by(project_name=self.name).count()
             
             if experiment_count > 0:
-                # Don't delete, but set project_id to None in experiments
-                experiments = Experiment.query.filter_by(project_id=self.id).all()
+                # Don't delete, but update project_name in experiments
+                experiments = Experiment.query.filter_by(project_name=self.name).all()
                 for exp in experiments:
-                    exp.project_id = None
                     exp.project_name = "Deleted Project"
                 
                 db.session.delete(self)
@@ -127,7 +126,7 @@ class Project(db.Model):
     def get_experiment_count(self):
         """Get number of experiments using this project"""
         from app.models.experiment import Experiment
-        return Experiment.query.filter_by(project_id=self.id).count()
+        return Experiment.query.filter_by(project_name=self.name).count()
     
     @staticmethod
     def get_projects_with_counts():
@@ -140,7 +139,7 @@ class Project(db.Model):
                 Project,
                 func.count(Experiment.id).label('experiment_count')
             ).outerjoin(
-                Experiment, Project.id == Experiment.project_id
+                Experiment, Project.name == Experiment.project_name
             ).group_by(Project.id).order_by(Project.name).all()
             
             return [(project, count) for project, count in projects_with_counts]

@@ -173,8 +173,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadExistingColumns(columns) {
     const tbody = document.getElementById('trial-columns-body');
     
-    // Skip the first 2 default columns and add the rest
-    const defaultColumns = ['id', 'label'];
+    // Skip the default columns that are already hardcoded in the HTML
+    const defaultColumns = ['trid', 'label'];
     
     for (const [columnName, columnType] of Object.entries(columns)) {
         if (!defaultColumns.includes(columnName)) {

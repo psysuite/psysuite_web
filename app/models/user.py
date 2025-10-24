@@ -15,7 +15,6 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     
     # Relationships
-    test_assignments = db.relationship('TestAssignment', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     access_logs = db.relationship('AccessLog', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
@@ -37,20 +36,33 @@ class User(UserMixin, db.Model):
         """Check if user is researcher"""
         return self.role == 'researcher'
     
-    def get_assigned_tests(self):
-        """Get list of tests assigned to this user"""
-        if self.is_admin():
-            from app.models.test import Test
-            return Test.query.all()
-        else:
-            return [assignment.test for assignment in self.test_assignments if assignment.test.status == 'production']
+    def get_all_tests(self):
+        """Get all tests (access control is now project-based)"""
+        from app.models.test import Test
+        return Test.query.all()
     
-    def has_test_access(self, test_id):
-        """Check if user has access to specific test"""
+    def get_accessible_project_names(self):
+        """Get list of project names this user can access"""
+        if self.is_admin():
+            from app.models.project import Project
+            return [p.name for p in Project.query.all()]
+        else:
+            # For now, researchers have access to all projects
+            # This can be modified later if you want to implement project restrictions
+            from app.models.project import Project
+            return [p.name for p in Project.query.all()]
+    
+    def can_access_experiment(self, experiment):
+        """Check if user can access a specific experiment based on project assignment"""
         if self.is_admin():
             return True
         
-        return self.test_assignments.filter_by(test_id=test_id).first() is not None
+        if not experiment.project_name or experiment.project_name in ['No Project', '', None]:
+            # Experiments without projects are only visible to admins
+            return False
+        
+        accessible_project_names = self.get_accessible_project_names()
+        return experiment.project_name in accessible_project_names
     
     def to_dict(self):
         """Convert user to dictionary for JSON serialization"""
@@ -63,19 +75,8 @@ class User(UserMixin, db.Model):
         }
 
 
-class TestAssignment(db.Model):
-    __tablename__ = 'test_assignments'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    test_id = db.Column(db.Integer, db.ForeignKey('tests.id'), nullable=False)
-    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Unique constraint to prevent duplicate assignments
-    __table_args__ = (db.UniqueConstraint('user_id', 'test_id', name='unique_user_test'),)
-    
-    def __repr__(self):
-        return f'<TestAssignment user_id={self.user_id} test_id={self.test_id}>'
+
+
 
 
 class AccessLog(db.Model):

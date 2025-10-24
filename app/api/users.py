@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from flask_login import current_user
 from app.api import bp
-from app.models.user import User, TestAssignment
+from app.models.user import User
 from app.models.test import Test
 from app.utils.decorators import admin_required, log_access, validate_json
 from app import db

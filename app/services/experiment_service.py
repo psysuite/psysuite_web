@@ -62,12 +62,12 @@ def get_experiments_service(test_id=None, device_id=None, label=None,
         
         # Apply user permissions if provided
         if user_permissions and not user_permissions.get('is_admin', False):
-            # For researchers, filter by assigned tests
-            assigned_test_ids = user_permissions.get('assigned_test_ids', [])
-            if assigned_test_ids:
-                query = query.filter(Experiment.test_id.in_(assigned_test_ids))
+            # For researchers, filter by accessible projects
+            accessible_project_names = user_permissions.get('accessible_project_names', [])
+            if accessible_project_names:
+                query = query.filter(Experiment.project_name.in_(accessible_project_names))
             else:
-                # No assigned tests, return empty result
+                # No accessible projects, return empty result
                 return True, {'experiments': [], 'total': 0}, None
         
         # Get total count before pagination
@@ -122,8 +122,8 @@ def get_experiment_by_id_service(experiment_id, user_permissions=None):
         
         # Check user permissions
         if user_permissions and not user_permissions.get('is_admin', False):
-            assigned_test_ids = user_permissions.get('assigned_test_ids', [])
-            if experiment.test_id not in assigned_test_ids:
+            accessible_project_names = user_permissions.get('accessible_project_names', [])
+            if not experiment.project_name or experiment.project_name not in accessible_project_names:
                 return False, 'Access denied', 403
         
         return True, experiment, None
@@ -151,8 +151,8 @@ def delete_experiment_service(experiment_id, user_permissions=None):
         
         # Check user permissions
         if user_permissions and not user_permissions.get('is_admin', False):
-            assigned_test_ids = user_permissions.get('assigned_test_ids', [])
-            if experiment.test_id not in assigned_test_ids:
+            accessible_project_names = user_permissions.get('accessible_project_names', [])
+            if not experiment.project_name or experiment.project_name not in accessible_project_names:
                 return False, 'Access denied', 403
         
         # Get trial model to delete trial data
@@ -201,9 +201,9 @@ def export_experiment_data_service(experiment_ids, format='csv', user_permission
         
         # Check user permissions for all experiments
         if user_permissions and not user_permissions.get('is_admin', False):
-            assigned_test_ids = user_permissions.get('assigned_test_ids', [])
+            accessible_project_names = user_permissions.get('accessible_project_names', [])
             for exp in experiments:
-                if exp.test_id not in assigned_test_ids:
+                if not exp.project_name or exp.project_name not in accessible_project_names:
                     return False, 'Access denied to one or more experiments', 403
         
         if format == 'csv':

@@ -50,7 +50,7 @@ def get_experiments():
         # Prepare user permissions context
         user_permissions = {
             'is_admin': current_user.is_admin(),
-            'assigned_test_ids': [assignment.test_id for assignment in current_user.test_assignments] if not current_user.is_admin() else []
+            'accessible_project_names': current_user.get_accessible_project_names()
         }
         
         # Use service to get experiments
@@ -85,7 +85,7 @@ def get_experiment(experiment_id):
         # Prepare user permissions context
         user_permissions = {
             'is_admin': current_user.is_admin(),
-            'assigned_test_ids': [assignment.test_id for assignment in current_user.test_assignments] if not current_user.is_admin() else []
+            'accessible_project_names': current_user.get_accessible_project_names()
         }
         
         # Use service to get experiment
@@ -114,7 +114,7 @@ def get_experiment_trials(experiment_id):
         # Prepare user permissions context
         user_permissions = {
             'is_admin': current_user.is_admin(),
-            'assigned_test_ids': [assignment.test_id for assignment in current_user.test_assignments] if not current_user.is_admin() else []
+            'accessible_project_names': current_user.get_accessible_project_names()
         }
         
         # Use service to get experiment (includes permission check)
@@ -163,7 +163,7 @@ def download_experiments():
         # Prepare user permissions context
         user_permissions = {
             'is_admin': current_user.is_admin(),
-            'assigned_test_ids': [assignment.test_id for assignment in current_user.test_assignments] if not current_user.is_admin() else []
+            'accessible_project_names': current_user.get_accessible_project_names()
         }
         
         # Use service to export experiment data
@@ -203,7 +203,7 @@ def delete_experiment(experiment_id):
         # Prepare user permissions context
         user_permissions = {
             'is_admin': current_user.is_admin(),
-            'assigned_test_ids': [assignment.test_id for assignment in current_user.test_assignments] if not current_user.is_admin() else []
+            'accessible_project_names': current_user.get_accessible_project_names()
         }
         
         # Use service to delete experiment

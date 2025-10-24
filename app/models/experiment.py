@@ -10,9 +10,8 @@ class Experiment(db.Model):
     test_id = db.Column(db.Integer, db.ForeignKey('tests.id'), nullable=False)
     device_id = db.Column(db.String(50), index=True)
     
-    # Project relationship
-    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=True, index=True)
-    project_name = db.Column(db.String(100), index=True)  # Denormalized for performance
+    # Project information (stored as name for simplicity)
+    project_name = db.Column(db.String(100), index=True)
     
     # Subject information (main display fields)
     label = db.Column(db.String(50))
@@ -36,8 +35,7 @@ class Experiment(db.Model):
     # Metadata
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     
-    # Relationships
-    project = db.relationship('Project', backref='experiments', lazy=True)
+    # Relationships (no project relationship since we use project_name directly)
     
     def __repr__(self):
         return f'<Experiment {self.exp_uid}>'
@@ -192,7 +190,6 @@ class Experiment(db.Model):
             'device_display': self.get_device_display(),
             'device_id': self.device_id,
             'device_id_display': self.get_device_id_display(),
-            'project_id': self.project_id,
             'project_name': self.project_name,
             'project_display': self.get_project_display(),
             'vercode': self.vercode,
@@ -230,7 +227,7 @@ class Experiment(db.Model):
         return Experiment.query.order_by(db.desc(Experiment.uploaded_at)).limit(limit).all()
     
     @staticmethod
-    def search_experiments(test_id=None, subject_label=None, project_id=None, completion_status=None, date_from=None, date_to=None):
+    def search_experiments(test_id=None, subject_label=None, project_name=None, completion_status=None, date_from=None, date_to=None):
         """Search experiments with various filters"""
         query = Experiment.query
         
@@ -240,8 +237,8 @@ class Experiment(db.Model):
         if subject_label:
             query = query.filter(Experiment.label.contains(subject_label))
         
-        if project_id:
-            query = query.filter_by(project_id=project_id)
+        if project_name:
+            query = query.filter_by(project_name=project_name)
         
         if date_from:
             query = query.filter(Experiment.uploaded_at >= date_from)
@@ -262,51 +259,142 @@ class Experiment(db.Model):
     def set_project(self, project):
         """Set project for this experiment"""
         if project:
-            self.project_id = project.id
             self.project_name = project.name
         else:
-            self.project_id = None
             self.project_name = None
     
     def set_project_by_name(self, project_name):
-        """Set project by name, creating project reference if it exists"""
-        from app.models.project import Project
-        
+        """Set project by name"""
         if not project_name or project_name.lower() in ['no project', 'n.a.', '']:
-            self.project_id = None
             self.project_name = 'No Project'
             return
         
-        # Try to find existing project
-        project = Project.get_project_by_name(project_name)
-        if project:
-            self.project_id = project.id
-            self.project_name = project.name
-        else:
-            # Store the name even if project doesn't exist in database
-            self.project_id = None
-            self.project_name = project_name
+        # Store the project name directly
+        self.project_name = project_name
     
     @staticmethod
-    def get_experiments_by_project(project_id, limit=None):
+    def get_experiments_by_project(project_name, limit=None):
         """Get experiments for a specific project"""
-        query = Experiment.query.filter_by(project_id=project_id).order_by(db.desc(Experiment.uploaded_at))
+        query = Experiment.query.filter_by(project_name=project_name).order_by(db.desc(Experiment.uploaded_at))
         if limit:
             query = query.limit(limit)
         return query.all()
     
     @staticmethod
+    def get_experiments_for_test_filtered_by_projects(test_id, accessible_project_names, limit=None):
+        """Get experiments for a test filtered by accessible projects"""
+        query = Experiment.query.filter_by(test_id=test_id)
+        
+        if accessible_project_names:
+            # Include experiments that belong to accessible projects
+            query = query.filter(Experiment.project_name.in_(accessible_project_names))
+        else:
+            # If no accessible projects, return empty result
+            query = query.filter(False)  # This will return no results
+        
+        query = query.order_by(db.desc(Experiment.uploaded_at))
+        
+        if limit:
+            query = query.limit(limit)
+        
+        return query.all()
+    
+    @staticmethod
     def get_project_statistics():
-        """Get statistics about experiments by project"""
+        """Get comprehensive project statistics"""
         from sqlalchemy import func
         from app.models.project import Project
         
-        # Get counts by project_name (including those without project_id)
-        stats = db.session.query(
-            Experiment.project_name,
-            func.count(Experiment.id).label('count')
-        ).group_by(Experiment.project_name).order_by(
-            func.count(Experiment.id).desc()
-        ).all()
+        # Get all projects
+        projects = Project.query.all()
         
-        return [(name or 'No Project', count) for name, count in stats]
+        # Get experiment counts by project
+        project_counts = db.session.query(
+            Experiment.project_name,
+            func.count(Experiment.id).label('total_experiments'),
+            func.count(func.nullif(Experiment.completion_status, 'incomplete')).label('completed_experiments')
+        ).group_by(Experiment.project_name).all()
+        
+        # Get experiments with no project
+        no_project_count = Experiment.query.filter(
+            (Experiment.project_name.is_(None)) |
+            (Experiment.project_name == '') |
+            (Experiment.project_name == 'No Project')
+        ).count()
+        
+        # Get completion rates by project
+        completion_stats = db.session.query(
+            Experiment.project_name,
+            func.avg(func.case(
+                (Experiment.completion_status == 'completed', 100.0),
+                else_=0.0
+            )).label('completion_rate')
+        ).group_by(Experiment.project_name).all()
+        
+        # Get recent activity (last 30 days)
+        from datetime import datetime, timedelta
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        
+        recent_activity = db.session.query(
+            Experiment.project_name,
+            func.count(Experiment.id).label('recent_experiments')
+        ).filter(
+            Experiment.uploaded_at >= thirty_days_ago
+        ).group_by(Experiment.project_name).all()
+        
+        # Combine all statistics
+        stats = {
+            'projects': [],
+            'total_projects': len(projects),
+            'total_experiments': Experiment.query.count(),
+            'no_project_experiments': no_project_count
+        }
+        
+        # Create project statistics dictionary
+        project_stats_dict = {}
+        
+        # Add count data - only for projects that actually exist
+        for project_name, total, completed in project_counts:
+            if project_name and project_name != 'No Project':
+                # Find the project to get its ID
+                project = next((p for p in projects if p.name == project_name), None)
+                if project:  # Only add if project exists in database
+                    project_stats_dict[project_name] = {
+                        'id': project.id,
+                        'name': project_name,
+                        'total_experiments': total,
+                        'completed_experiments': completed,
+                        'completion_rate': 0.0,
+                        'recent_experiments': 0
+                    }
+        
+        # Add completion rate data
+        for project_name, completion_rate in completion_stats:
+            if project_name and project_name in project_stats_dict:
+                project_stats_dict[project_name]['completion_rate'] = float(completion_rate or 0)
+        
+        # Add recent activity data
+        for project_name, recent_count in recent_activity:
+            if project_name and project_name in project_stats_dict:
+                project_stats_dict[project_name]['recent_experiments'] = recent_count
+        
+        # Add projects that exist but have no experiments
+        for project in projects:
+            if project.name not in project_stats_dict:
+                project_stats_dict[project.name] = {
+                    'id': project.id,
+                    'name': project.name,
+                    'total_experiments': 0,
+                    'completed_experiments': 0,
+                    'completion_rate': 0.0,
+                    'recent_experiments': 0
+                }
+        
+        # Convert to list and sort by total experiments
+        stats['projects'] = sorted(
+            project_stats_dict.values(),
+            key=lambda x: x['total_experiments'],
+            reverse=True
+        )
+        
+        return stats

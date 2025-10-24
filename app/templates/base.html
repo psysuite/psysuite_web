@@ -5,16 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}PsySuite Web Manager{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     {% block head %}{% endblock %}
 </head>
 <body>
     {% if current_user.is_authenticated %}
     <nav class="navbar">
         <div class="nav-left">
-            <button onclick="goBack()" class="btn btn-back">← Back</button>
+            <!-- Home button (hidden when on dashboard) -->
+            {% if request.endpoint != 'web.dashboard' %}
+            <button onclick="location.href='{{ url_for('web.dashboard') }}'" class="btn btn-home">
+                <i class="fas fa-home"></i> Home
+            </button>
+            {% endif %}
+            
             {% if current_user.role == 'admin' %}
-            <button onclick="location.href='{{ url_for('web.users') }}'" class="btn btn-users">Users</button>
-            <button onclick="location.href='{{ url_for('projects.manage_projects') }}'" class="btn btn-projects">Projects</button>
+            <!-- Users button (hidden when on users page) -->
+            {% if request.endpoint != 'web.users' %}
+            <button onclick="location.href='{{ url_for('web.users') }}'" class="btn btn-users">
+                <i class="fas fa-users"></i> Users
+            </button>
+            {% endif %}
+            
+            <!-- Projects button (hidden when on projects pages) -->
+            {% if not request.endpoint.startswith('projects.') %}
+            <button onclick="location.href='{{ url_for('projects.manage_projects') }}'" class="btn btn-projects">
+                <i class="fas fa-folder"></i> Projects
+            </button>
+            {% endif %}
             {% endif %}
         </div>
         <div class="nav-right">

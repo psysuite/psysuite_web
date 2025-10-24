@@ -63,7 +63,8 @@ def upload_experiment_service(exp_uid, test_class_name, configuration, trials, d
         
         # Check if test can accept experiments
         if not test.can_accept_experiments():
-            return False, f'Test "{test.name}" is not accepting new experiments (status: {test.status})', 400
+            logging.warning(f"Experiment submission rejected - Test '{test.name}' (class: {test_class_name}) is not in production status. Current status: {test.status}")
+            return False, f'Test "{test.name}" is not in production status. Current status: {test.status}. Only tests in production status accept submissions.', 423
         
         # Validate configuration structure
         is_valid, error_msg = _validate_configuration(configuration)
@@ -198,7 +199,7 @@ def validate_upload_service(test_class_name, configuration):
         
         # Check test status
         if not test.can_accept_experiments():
-            return False, f'Test "{test.name}" is not accepting new experiments (status: {test.status})', 400
+            return False, f'Test "{test.name}" is not in production status. Current status: {test.status}. Only tests in production status accept submissions.', 423
         
         # Validate configuration
         is_valid, error_msg = _validate_configuration(configuration)

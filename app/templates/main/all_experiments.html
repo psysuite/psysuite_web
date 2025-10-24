@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}{{ test.name }} Experiments - PsySuite Web Manager{% endblock %}
+{% block title %}All Experiments - PsySuite Web Manager{% endblock %}
 
 {% block content %}
 <div class="content">
-    <h2>{{ test.name }} - Experiments</h2>
-    <p class="text-muted">{{ test.description or 'No description available' }}</p>
+    <h2>All Experiments</h2>
+    <p class="text-muted">View and manage experiments across all tests</p>
     
     <!-- Filters -->
     <div class="row mb-3">
@@ -36,33 +36,36 @@
                     <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
                 </th>
                 <th class="sortable" onclick="sortTable(1)">
-                    Subject <i class="fas fa-sort sort-icon"></i>
+                    Test <i class="fas fa-sort sort-icon"></i>
                 </th>
                 <th class="sortable" onclick="sortTable(2)">
-                    Age <i class="fas fa-sort sort-icon"></i>
+                    Subject <i class="fas fa-sort sort-icon"></i>
                 </th>
                 <th class="sortable" onclick="sortTable(3)">
-                    Population <i class="fas fa-sort sort-icon"></i>
+                    Age <i class="fas fa-sort sort-icon"></i>
                 </th>
                 <th class="sortable" onclick="sortTable(4)">
-                    Session <i class="fas fa-sort sort-icon"></i>
+                    Population <i class="fas fa-sort sort-icon"></i>
                 </th>
                 <th class="sortable" onclick="sortTable(5)">
-                    Gender <i class="fas fa-sort sort-icon"></i>
+                    Session <i class="fas fa-sort sort-icon"></i>
                 </th>
                 <th class="sortable" onclick="sortTable(6)">
-                    Project <i class="fas fa-sort sort-icon"></i>
+                    Gender <i class="fas fa-sort sort-icon"></i>
                 </th>
                 <th class="sortable" onclick="sortTable(7)">
-                    Status <i class="fas fa-sort sort-icon"></i>
+                    Project <i class="fas fa-sort sort-icon"></i>
                 </th>
                 <th class="sortable" onclick="sortTable(8)">
-                    Trials <i class="fas fa-sort sort-icon"></i>
+                    Status <i class="fas fa-sort sort-icon"></i>
                 </th>
                 <th class="sortable" onclick="sortTable(9)">
-                    Experiment Date <i class="fas fa-sort sort-icon"></i>
+                    Trials <i class="fas fa-sort sort-icon"></i>
                 </th>
                 <th class="sortable" onclick="sortTable(10)">
+                    Experiment Date <i class="fas fa-sort sort-icon"></i>
+                </th>
+                <th class="sortable" onclick="sortTable(11)">
                     Device ID <i class="fas fa-sort sort-icon"></i>
                 </th>
             </tr>
@@ -73,6 +76,7 @@
                 <td>
                     <input type="checkbox" data-experiment-id="{{ experiment.id }}" onchange="updateSelectedCount()">
                 </td>
+                <td>{{ experiment.test.name if experiment.test else 'Unknown Test' }}</td>
                 <td>{{ experiment.subject_label }}</td>
                 <td>{{ experiment.subject_age }}</td>
                 <td>{{ experiment.get_population_display() }}</td>
@@ -98,19 +102,19 @@
     {% if experiments.pages > 1 %}
     <div class="pagination">
         {% if experiments.has_prev %}
-            <a href="{{ url_for('web.test_experiments', test_id=test.id, page=experiments.prev_num) }}" class="btn btn-secondary">Previous</a>
+            <a href="{{ url_for('web.experiments', page=experiments.prev_num) }}" class="btn btn-secondary">Previous</a>
         {% endif %}
         
         <span>Page {{ experiments.page }} of {{ experiments.pages }}</span>
         
         {% if experiments.has_next %}
-            <a href="{{ url_for('web.test_experiments', test_id=test.id, page=experiments.next_num) }}" class="btn btn-secondary">Next</a>
+            <a href="{{ url_for('web.experiments', page=experiments.next_num) }}" class="btn btn-secondary">Next</a>
         {% endif %}
     </div>
     {% endif %}
     
     {% else %}
-    <p class="text-muted">No experiments found for this test.</p>
+    <p class="text-muted">No experiments found.</p>
     {% endif %}
 </div>
 {% endblock %}
@@ -235,13 +239,13 @@ function sortTable(columnIndex) {
         let bValue = bCell.textContent.trim();
         
         // Handle numeric values
-        if (columnIndex === 2 || columnIndex === 4 || columnIndex === 8) { // Age, Session, Trials
+        if (columnIndex === 3 || columnIndex === 5 || columnIndex === 9) { // Age, Session, Trials
             aValue = parseInt(aValue) || 0;
             bValue = parseInt(bValue) || 0;
         }
         
         // Handle date values
-        if (columnIndex === 9) { // Experiment Date
+        if (columnIndex === 10) { // Experiment Date
             aValue = new Date(aValue);
             bValue = new Date(bValue);
         }
@@ -285,6 +289,11 @@ document.addEventListener('DOMContentLoaded', function() {
 .badge-warning {
     background-color: #ffc107;
     color: #212529;
+}
+
+.badge-info {
+    background-color: #17a2b8;
+    color: white;
 }
 
 .pagination {

@@ -182,7 +182,7 @@ def project_experiments(project_id):
             flash('Project not found', 'error')
             return redirect(url_for('projects.manage_projects'))
         
-        experiments = Experiment.get_experiments_by_project(project_id)
+        experiments = Experiment.get_experiments_by_project(project.name)
         
         return render_template('admin/project_experiments.html',
                              project=project,

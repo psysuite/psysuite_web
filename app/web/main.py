@@ -15,13 +15,9 @@ def dashboard():
     print("DEBUG: Dashboard route accessed")
     print(f"DEBUG: Current user: {current_user.email if current_user.is_authenticated else 'Anonymous'}")
     
-    # Get tests based on user role
-    if current_user.is_admin():
-        print("DEBUG: User is admin, getting all tests")
-        tests = Test.query.all()
-    else:
-        print("DEBUG: User is not admin, getting assigned tests")
-        tests = current_user.get_assigned_tests()
+    # All users (admin and researcher) can see all tests
+    # Access control is now based on projects, not tests
+    tests = Test.query.all()
     
     print(f"DEBUG: Found {len(tests)} tests")
     return render_template('main/dashboard.html', tests=tests)
@@ -34,18 +30,95 @@ def test_experiments(test_id):
     """View experiments for a specific test"""
     test = Test.query.get_or_404(test_id)
     
-    # Check access permissions
-    if not current_user.has_test_access(test_id):
-        flash('Access denied to this test', 'error')
-        return redirect(url_for('web.dashboard'))
+    # Get query parameters for filtering
+    page = request.args.get('page', 1, type=int)
+    project_filter = request.args.get('project', '')
+    per_page = 20
     
+    # Get user's accessible project names
+    accessible_project_names = current_user.get_accessible_project_names()
+    
+    # Build experiments query with project-based filtering
+    if current_user.is_admin():
+        # Admins see all experiments for the test
+        experiments_query = Experiment.query.filter_by(test_id=test_id)
+    else:
+        # Researchers see only experiments from their assigned projects
+        if accessible_project_names:
+            experiments_query = Experiment.query.filter_by(test_id=test_id).filter(
+                Experiment.project_name.in_(accessible_project_names)
+            )
+        else:
+            # No accessible projects = no experiments
+            experiments_query = Experiment.query.filter(False)
+
+    # Apply additional project filter if specified
+    if project_filter:
+        if project_filter.lower() == 'none':
+            # Show experiments with no project (only for admins)
+            if current_user.is_admin():
+                experiments_query = experiments_query.filter(
+                    (Experiment.project_name is None) |
+                    (Experiment.project_name == '') |
+                    (Experiment.project_name == 'No Project')
+                )
+            else:
+                # Researchers can't see experiments without projects
+                experiments_query = Experiment.query.filter(False)
+        else:
+            # Show experiments for specific project
+            experiments_query = experiments_query.filter(Experiment.project_name == project_filter)
+
+    experiments_query = experiments_query.order_by(Experiment.uploaded_at.desc())
+    experiments = experiments_query.paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    # Get available projects for the filter dropdown
+    from app.models.project import Project
+    available_projects = Project.get_all_projects()
+
+    # Get project statistics for this test (filtered by user access)
+    if current_user.is_admin():
+        project_stats_query = Experiment.query.filter_by(test_id=test_id)
+    else:
+        if accessible_project_names:
+            project_stats_query = Experiment.query.filter_by(test_id=test_id).filter(
+                Experiment.project_name.in_(accessible_project_names)
+            )
+        else:
+            project_stats_query = Experiment.query.filter(False)
+    
+    project_stats = project_stats_query.with_entities(
+        Experiment.project_name,
+        db.func.count(Experiment.id).label('count')
+    ).group_by(Experiment.project_name).all()
+
+    return render_template('main/test_experiments.html',
+                         test=test, 
+                         experiments=experiments,
+                         available_projects=available_projects,
+                         project_stats=project_stats,
+                         current_project_filter=project_filter)
+
+
+@bp.route('/experiments')
+@login_required
+@researcher_required
+def experiments():
+    """View all experiments across all tests"""
     # Get query parameters for filtering
     page = request.args.get('page', 1, type=int)
     project_filter = request.args.get('project', '')
     per_page = 20
     
     # Build experiments query with project filtering
-    experiments_query = Experiment.query.filter_by(test_id=test_id)
+    experiments_query = Experiment.query
+    
+    # Filter by tests user has access to
+    if not current_user.is_admin():
+        user_test_ids = [test.id for test in current_user.get_assigned_tests()]
+        experiments_query = experiments_query.filter(Experiment.test_id.in_(user_test_ids))
 
     # Apply project filter if specified
     if project_filter:
@@ -69,17 +142,9 @@ def test_experiments(test_id):
     from app.models.project import Project
     available_projects = Project.get_all_projects()
 
-    # Get project statistics for this test
-    project_stats = Experiment.query.filter_by(test_id=test_id).with_entities(
-        Experiment.project_name,
-        db.func.count(Experiment.id).label('count')
-    ).group_by(Experiment.project_name).all()
-
-    return render_template('main/test_experiments.html',
-                         test=test, 
+    return render_template('main/all_experiments.html',
                          experiments=experiments,
                          available_projects=available_projects,
-                         project_stats=project_stats,
                          current_project_filter=project_filter)
 
 
@@ -90,8 +155,8 @@ def single_experiment(experiment_id):
     """View single experiment details"""
     experiment = Experiment.query.get_or_404(experiment_id)
     
-    # Check access permissions
-    if not current_user.has_test_access(experiment.test_id):
+    # Check access permissions based on project assignment
+    if not current_user.can_access_experiment(experiment):
         flash('Access denied to this experiment', 'error')
         return redirect(url_for('web.dashboard'))
     
@@ -109,10 +174,7 @@ def get_test_parameters(test_id):
     """Get test parameters for AJAX requests"""
     test = Test.query.get_or_404(test_id)
     
-    # Check access permissions
-    if not current_user.has_test_access(test_id):
-        return jsonify({'error': 'Access denied'}), 403
-    
+    # All users can see test parameters (access control is now project-based)
     # Get the basic test data
     test_data = test.to_dict()
     

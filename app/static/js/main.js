@@ -30,14 +30,8 @@ function goBack() {
 }
 
 function logout() {
-    fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    }).then(() => {
-        window.location.href = '/login';
-    });
+    // Use the web logout route directly for simplicity and reliability
+    window.location.href = '/logout';
 }
 
 // Test management functions
