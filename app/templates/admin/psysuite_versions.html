@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}PsySuite Versions - PsySuite Web Manager{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>PsySuite Mobile App Versions</h2>
+        <a href="{{ url_for('api.psysuite_application_new') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Upload New Version
+        </a>
+    </div>
+
+    {% if latest %}
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-mobile-alt"></i> Current Version
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Version:</strong> {{ latest.sver }} (Code: {{ latest.version }})</p>
+                    <p><strong>Created:</strong> {{ latest.created_at.strftime('%Y-%m-%d %H:%M') if latest.created_at else 'Unknown' }}</p>
+                    <p><strong>Created by:</strong> {{ latest.created_by or 'Unknown' }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Description:</strong></p>
+                    <p class="text-muted">{{ latest.description or 'No description provided' }}</p>
+                </div>
+            </div>
+            <div class="mt-3">
+                <a href="{{ url_for('api.psysuite_application_latest') }}" class="btn btn-info btn-sm">
+                    <i class="fas fa-eye"></i> View Details
+                </a>
+                <a href="{{ url_for('api.psysuite_apk') }}" class="btn btn-success btn-sm">
+                    <i class="fas fa-download"></i> Download APK
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if versions %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Version History</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Version</th>
+                            <th>Code</th>
+                            <th>Description</th>
+                            <th>Created</th>
+                            <th>Created By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for version in versions %}
+                        <tr class="{{ 'table-success' if loop.first else '' }}">
+                            <td>
+                                <strong>{{ version.sver }}</strong>
+                                {% if loop.first %}
+                                <span class="badge bg-success ms-2">Latest</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ version.version }}</td>
+                            <td>{{ version.description[:50] + '...' if version.description and version.description|length > 50 else version.description or 'No description' }}</td>
+                            <td>{{ version.created_at.strftime('%Y-%m-%d') if version.created_at else 'Unknown' }}</td>
+                            <td>{{ version.created_by or 'Unknown' }}</td>
+                            <td>
+                                <a href="{{ url_for('api.psysuite_application_latest') if loop.first else '#' }}" 
+                                   class="btn btn-sm btn-outline-info {{ 'disabled' if not loop.first else '' }}">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        No PsySuite versions have been uploaded yet. 
+        <a href="{{ url_for('api.psysuite_application_new') }}">Upload the first version</a>.
+    </div>
+    {% endif %}
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Update Check Endpoint</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Android app checks for updates at:</p>
+                    <code>{{ request.host_url }}api/psysuitestableupdate.xml</code>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Download Endpoint</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Latest APK download:</p>
+                    <code>{{ request.host_url }}api/psysuite.apk</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

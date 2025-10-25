@@ -13,7 +13,9 @@
             <label for="projectFilter" class="form-label">Filter by Project:</label>
             <select id="projectFilter" class="form-select" onchange="filterByProject()">
                 <option value="">All Projects</option>
+                {% if current_user.is_admin() %}
                 <option value="none" {{ 'selected' if current_project_filter == 'none' else '' }}>No Project</option>
+                {% endif %}
                 {% for project in available_projects %}
                 <option value="{{ project.name }}" {{ 'selected' if current_project_filter == project.name else '' }}>
                     {{ project.name }}

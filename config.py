@@ -23,7 +23,8 @@ class Config:
     ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or 'antares'
     
     # Upload settings
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    MAX_CONTENT_LENGTH = 200 * 1024 * 1024  # 200MB max file size (for APK uploads)
+    UPLOAD_TIMEOUT = 300  # 5 minutes timeout for large uploads
     
     # Session settings
     PERMANENT_SESSION_LIFETIME = 3600  # 1 hour

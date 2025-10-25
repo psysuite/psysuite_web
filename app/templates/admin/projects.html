@@ -9,32 +9,22 @@
         <p class="text-muted">Manage research projects for experiment organization</p>
     </div>
 
-    <!-- Create New Project -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Create New Project</h5>
-        </div>
-        <div class="card-body">
-            <form method="POST" action="{{ url_for('projects.create_project') }}" class="row g-3">
-                <div class="col-md-8">
-                    <label for="projectName" class="form-label">Project Name</label>
-                    <input type="text" class="form-control" id="projectName" name="name"
-                        placeholder="Enter project name" maxlength="100" required>
-                    <div class="form-text">Maximum 100 characters</div>
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary">Create Project</button>
-                </div>
-            </form>
-        </div>
+    <!-- Action Buttons -->
+    <div class="mb-4 d-flex gap-2">
+        <button type="button" class="btn btn-primary" onclick="showCreateForm()">
+            <i class="fas fa-plus"></i> Create Project
+        </button>
+        <a href="{{ url_for('projects.project_statistics') }}" class="btn btn-outline-info">
+            <i class="fas fa-chart-bar"></i> View Statistics
+        </a>
     </div>
 
-    <!-- Projects List -->
+    <!-- Projects Table -->
     <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Existing Projects</h5>
-            <span class="badge bg-secondary">{{ projects_with_counts|length }} projects</span>
-        </div>
+<!--        <div class="card-header d-flex justify-content-between align-items-center">-->
+<!--            <h5 class="mb-0">Existing Projects</h5>-->
+<!--            <span class="badge bg-secondary">{{ projects_with_counts|length }} projects</span>-->
+<!--        </div>-->
         <div class="card-body">
             {% if projects_with_counts %}
             <div class="table-responsive">
@@ -56,10 +46,7 @@
                             </td>
                             <td>
                                 {% if experiment_count > 0 %}
-                                <a href="{{ url_for('projects.project_experiments', project_id=project.id) }}"
-                                    class="badge bg-info text-decoration-none">
-                                    {{ experiment_count }} experiments
-                                </a>
+                                <span class="badge bg-info">{{ experiment_count }} experiments</span>
                                 {% else %}
                                 <span class="text-muted">No experiments</span>
                                 {% endif %}
@@ -75,21 +62,19 @@
                                 {{ project.created_by or 'Unknown' }}
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <!-- Edit Button -->
-                                    <button type="button" class="btn btn-outline-primary btn-action"
-                                        onclick="editProject({{ project.id }}, '{{ project.name|e }}')"
-                                        title="Edit project">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-
-                                    <!-- Delete Button -->
-                                    <button type="button" class="btn btn-outline-danger btn-action"
-                                        onclick="deleteProject({{ project.id }}, '{{ project.name|e }}', {{ experiment_count }})"
-                                        title="Delete project">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary me-1 edit-btn"
+                                    data-project-id="{{ project.id }}" 
+                                    data-project-name="{{ project.name }}"
+                                    title="Edit project">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger delete-btn"
+                                    data-project-id="{{ project.id }}" 
+                                    data-project-name="{{ project.name }}" 
+                                    data-experiment-count="{{ experiment_count }}"
+                                    title="Delete project">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -100,108 +85,98 @@
             <div class="text-center py-5">
                 <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
                 <h5 class="text-muted">No Projects Created</h5>
-                <p class="text-muted">Create your first project using the form above.</p>
+                <p class="text-muted">Create your first project using the button above.</p>
             </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-body text-center">
-                    <i class="fas fa-chart-bar fa-2x text-primary mb-2"></i>
-                    <h6>Project Statistics</h6>
-                    <a href="{{ url_for('projects.project_statistics') }}" class="btn btn-outline-primary btn-sm">
-                        View Statistics
-                    </a>
+    <!-- Create/Edit Form (Hidden by default) -->
+    <div id="projectForm" class="card mt-4" style="display: none;">
+        <div class="card-body">
+            <form id="projectFormElement" method="POST">
+                <div class="mb-3">
+                    <label id="formLabel" for="projectNameInput" class="form-label">New Project Name</label>
+                    <input type="text" class="form-control" id="projectNameInput" name="name"
+                        placeholder="Enter project name" maxlength="100" required>
+                    <div class="form-text">Maximum 100 characters</div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Project Modal -->
-<div class="modal fade" id="editProjectModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-edit text-primary"></i> Edit Project
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="editProjectForm" method="POST">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="editProjectName" class="form-label">Project Name</label>
-                        <input type="text" class="form-control" id="editProjectName" name="name" maxlength="100"
-                            required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-success" id="saveButton">
                         <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="hideForm()">
+                        <i class="fas fa-times"></i> Cancel
                     </button>
                 </div>
             </form>
         </div>
     </div>
-</div>
 
-<!-- Delete Project Modal -->
-<div class="modal fade" id="deleteProjectModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-trash text-danger"></i> Delete Project
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <!-- Delete Confirmation (Hidden by default) -->
+    <div id="deleteConfirm" class="card mt-4" style="display: none;">
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Warning!</strong> This action cannot be undone.
             </div>
-            <div class="modal-body">
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Warning!</strong> This action cannot be undone.
-                </div>
-                <p>Are you sure you want to delete the project "<strong id="deleteProjectName"></strong>"?</p>
-                <div id="deleteProjectWarning" class="alert alert-info" style="display: none;">
-                    <i class="fas fa-info-circle"></i>
-                    This project has <strong id="deleteProjectCount"></strong> associated experiments.
-                    The experiments will be updated to show "Deleted Project" but the data will be preserved.
-                </div>
+            <p>Are you sure you want to delete the project "<strong id="deleteProjectName"></strong>"?</p>
+            <div id="deleteWarning" class="alert alert-info" style="display: none;">
+                <i class="fas fa-info-circle"></i>
+                This project has <strong id="deleteExperimentCount"></strong> associated experiments.
+                The experiments will be updated to show "Deleted Project" but the data will be preserved.
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteProjectForm" method="POST" style="display: inline;">
+            <div class="d-flex gap-2">
+                <form id="deleteForm" method="POST" style="display: inline;">
                     <button type="submit" class="btn btn-danger">
                         <i class="fas fa-trash"></i> Delete Project
                     </button>
                 </form>
+                <button type="button" class="btn btn-secondary" onclick="hideDeleteConfirm()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
             </div>
         </div>
     </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function editProject(projectId, projectName) {
-        document.getElementById('editProjectName').value = projectName;
-        document.getElementById('editProjectForm').action = `/admin/projects/${projectId}/edit`;
+    let currentProjectId = null;
 
-        const modal = new bootstrap.Modal(document.getElementById('editProjectModal'));
-        modal.show();
+    function showCreateForm() {
+        document.getElementById('formLabel').textContent = 'New Project Name';
+        document.getElementById('projectNameInput').value = '';
+        document.getElementById('projectFormElement').action = '{{ url_for("projects.create_project") }}';
+        document.getElementById('saveButton').innerHTML = '<i class="fas fa-save"></i> Save Changes';
+        document.getElementById('projectForm').style.display = 'block';
+        document.getElementById('projectNameInput').focus();
+        currentProjectId = null;
     }
 
-    function deleteProject(projectId, projectName, experimentCount) {
-        document.getElementById('deleteProjectName').textContent = projectName;
-        document.getElementById('deleteProjectForm').action = `/admin/projects/${projectId}/delete`;
+    function showEditForm(projectId, projectName) {
+        document.getElementById('formLabel').textContent = 'Edit Project Name';
+        document.getElementById('projectNameInput').value = projectName;
+        document.getElementById('projectFormElement').action = `/admin/projects/${projectId}/edit`;
+        document.getElementById('saveButton').innerHTML = '<i class="fas fa-save"></i> Save Changes';
+        document.getElementById('projectForm').style.display = 'block';
+        document.getElementById('projectNameInput').focus();
+        currentProjectId = projectId;
+    }
 
-        const warningDiv = document.getElementById('deleteProjectWarning');
-        const countSpan = document.getElementById('deleteProjectCount');
+    function hideForm() {
+        document.getElementById('projectForm').style.display = 'none';
+        currentProjectId = null;
+    }
+
+    function showDeleteConfirm(projectId, projectName, experimentCount) {
+        document.getElementById('deleteProjectName').textContent = projectName;
+        document.getElementById('deleteForm').action = `/admin/projects/${projectId}/delete`;
+
+        const warningDiv = document.getElementById('deleteWarning');
+        const countSpan = document.getElementById('deleteExperimentCount');
 
         if (experimentCount > 0) {
             countSpan.textContent = experimentCount;
@@ -210,12 +185,42 @@
             warningDiv.style.display = 'none';
         }
 
-        const modal = new bootstrap.Modal(document.getElementById('deleteProjectModal'));
-        modal.show();
+        document.getElementById('deleteConfirm').style.display = 'block';
     }
 
-    // Auto-focus on project name input when create form is visible
-    document.getElementById('projectName').focus();
+    function hideDeleteConfirm() {
+        document.getElementById('deleteConfirm').style.display = 'none';
+    }
+
+    // Add event listeners for edit and delete buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        // Edit button listeners
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const projectId = this.dataset.projectId;
+                const projectName = this.dataset.projectName;
+                showEditForm(projectId, projectName);
+            });
+        });
+
+        // Delete button listeners
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const projectId = this.dataset.projectId;
+                const projectName = this.dataset.projectName;
+                const experimentCount = this.dataset.experimentCount;
+                showDeleteConfirm(projectId, projectName, experimentCount);
+            });
+        });
+    });
+
+    // Hide forms when clicking outside or pressing Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            hideForm();
+            hideDeleteConfirm();
+        }
+    });
 </script>
 
 <style>

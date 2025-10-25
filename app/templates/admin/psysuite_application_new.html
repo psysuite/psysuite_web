@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Upload New PsySuite Version - PsySuite Web Manager{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Upload New PsySuite Version</h2>
+        <a href="{{ url_for('api.psysuite_versions') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Versions
+        </a>
+    </div>
+
+    {% if latest %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        <strong>Current Version:</strong> {{ latest.sver }} (Code: {{ latest.version }})
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Version Information</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('api.psysuite_application_new') }}" method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.version.label(class="form-label") }}
+                                    {{ form.version(class="form-control") }}
+                                    {% if form.version.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.version.errors %}
+                                                <div>{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Numeric version code (must be higher than previous versions)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.sver.label(class="form-label") }}
+                                    {{ form.sver(class="form-control") }}
+                                    {% if form.sver.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.sver.errors %}
+                                                <div>{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Human-readable version string (e.g., 1.2.3)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control") }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.description.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Describe what's new in this version</div>
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.apk.label(class="form-label") }}
+                            {{ form.apk(class="form-control", accept=".apk") }}
+                            {% if form.apk.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.apk.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Select the APK file to upload (will be stored as psysuite_v{version}.apk)</div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-primary", id="submitBtn") }}
+                            <a href="{{ url_for('api.psysuite_versions') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                        
+                        <!-- Upload progress indicator -->
+                        <div id="uploadProgress" class="mt-3" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <strong>Uploading APK...</strong> This may take several minutes for large files.
+                                <div class="progress mt-2">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" style="width: 100%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Upload Guidelines</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small">
+                        <li>Version code must be a unique integer</li>
+                        <li>Version code should be higher than the previous version</li>
+                        <li>Version string should follow semantic versioning (e.g., 1.2.3)</li>
+                        <li>APK file will be stored in <code>instance/apk/</code></li>
+                        <li>Only APK files are accepted</li>
+                        <li>Maximum file size: 200MB</li>
+                        <li>Large files may take several minutes to upload</li>
+                    </ul>
+                </div>
+            </div>
+
+            {% if latest %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Previous Version</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-1"><strong>Version:</strong> {{ latest.sver }}</p>
+                    <p class="small mb-1"><strong>Code:</strong> {{ latest.version }}</p>
+                    <p class="small mb-0"><strong>Created:</strong> {{ latest.created_at.strftime('%Y-%m-%d') if latest.created_at else 'Unknown' }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-suggest next version string based on version code
+document.getElementById('version').addEventListener('change', function() {
+    const versionCode = parseInt(this.value);
+    const sverField = document.getElementById('sver');
+    
+    if (versionCode && !sverField.value) {
+        // Simple version string suggestion based on version code
+        const major = Math.floor(versionCode / 100);
+        const minor = Math.floor((versionCode % 100) / 10);
+        const patch = versionCode % 10;
+        sverField.value = `${major}.${minor}.${patch}`;
+    }
+});
+
+// File upload validation
+document.getElementById('apk').addEventListener('change', function() {
+    const file = this.files[0];
+    if (file) {
+        if (!file.name.toLowerCase().endsWith('.apk')) {
+            alert('Please select an APK file');
+            this.value = '';
+            return;
+        }
+        
+        // Check file size (updated to match server limit)
+        const maxSize = 200 * 1024 * 1024; // 200MB
+        if (file.size > maxSize) {
+            alert('File size too large. Maximum size is 200MB.');
+            this.value = '';
+            return;
+        }
+        
+        console.log(`Selected APK: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+    }
+});
+
+// Show upload progress when form is submitted
+document.querySelector('form').addEventListener('submit', function(e) {
+    const apkFile = document.getElementById('apk').files[0];
+    if (apkFile && apkFile.size > 50 * 1024 * 1024) { // Show progress for files > 50MB
+        document.getElementById('uploadProgress').style.display = 'block';
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    }
+});
+</script>
+{% endblock %}

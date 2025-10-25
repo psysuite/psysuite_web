@@ -18,7 +18,7 @@
                 <th>Role</th>
                 <th>Status</th>
                 <th>Created</th>
-                <th>Role</th>
+                <th>Assigned Projects</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -38,12 +38,16 @@
                 </td>
                 <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
                 <td>
-                    <span class="badge badge-{{ 'primary' if user.role == 'admin' else 'secondary' }}">
-                        {{ user.role.title() }}
-                    </span>
+                    {% if user.role == 'admin' %}
+                        <span class="text-muted">All Projects</span>
+                    {% else %}
+                        {{ user.project_assignments|length }} projects
+                    {% endif %}
                 </td>
                 <td>
-
+                    {% if user.role == 'researcher' %}
+                    <a href="{{ url_for('web.assign_projects', user_id=user.id) }}" class="btn btn-sm btn-info">Assign Projects</a>
+                    {% endif %}
                     
                     {% if user.id != current_user.id %}
                     <button onclick="deleteUser({{ user.id }})" class="btn btn-sm btn-danger">Delete</button>

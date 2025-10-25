@@ -47,10 +47,8 @@ class User(UserMixin, db.Model):
             from app.models.project import Project
             return [p.name for p in Project.query.all()]
         else:
-            # For now, researchers have access to all projects
-            # This can be modified later if you want to implement project restrictions
-            from app.models.project import Project
-            return [p.name for p in Project.query.all()]
+            # Return only projects assigned to this researcher
+            return [assignment.project.name for assignment in self.project_assignments]
     
     def can_access_experiment(self, experiment):
         """Check if user can access a specific experiment based on project assignment"""
@@ -77,6 +75,25 @@ class User(UserMixin, db.Model):
 
 
 
+
+
+class ProjectAssignment(db.Model):
+    __tablename__ = 'project_assignments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='project_assignments')
+    project = db.relationship('Project', backref='user_assignments')
+    
+    # Unique constraint to prevent duplicate assignments
+    __table_args__ = (db.UniqueConstraint('user_id', 'project_id', name='unique_user_project'),)
+    
+    def __repr__(self):
+        return f'<ProjectAssignment {self.user.email} -> {self.project.name}>'
 
 
 class AccessLog(db.Model):

@@ -33,6 +33,13 @@
                 <i class="fas fa-folder"></i> Projects
             </button>
             {% endif %}
+            
+            <!-- PsySuite Versions button (hidden when on psysuite pages) -->
+            {% if not request.endpoint.startswith('api.psysuite') %}
+            <button onclick="location.href='{{ url_for('api.psysuite_versions') }}'" class="btn btn-versions">
+                <i class="fas fa-mobile-alt"></i> PsySuite Versions
+            </button>
+            {% endif %}
             {% endif %}
         </div>
         <div class="nav-right">

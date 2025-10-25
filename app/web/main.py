@@ -1,5 +1,7 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
+
+from app.models import User
 from app.web import bp
 from app.models.test import Test
 from app.models.experiment import Experiment
@@ -74,9 +76,14 @@ def test_experiments(test_id):
         page=page, per_page=per_page, error_out=False
     )
     
-    # Get available projects for the filter dropdown
+    # Get available projects for the filter dropdown (only user's accessible projects)
     from app.models.project import Project
-    available_projects = Project.get_all_projects()
+    if current_user.is_admin():
+        available_projects = Project.get_all_projects()
+    else:
+        # Only show projects the user has access to
+        accessible_project_names = current_user.get_accessible_project_names()
+        available_projects = [Project.get_project_by_name(name) for name in accessible_project_names if Project.get_project_by_name(name)]
 
     # Get project statistics for this test (filtered by user access)
     if current_user.is_admin():
@@ -113,12 +120,19 @@ def experiments():
     per_page = 20
     
     # Build experiments query with project filtering
-    experiments_query = Experiment.query
-    
-    # Filter by tests user has access to
-    if not current_user.is_admin():
-        user_test_ids = [test.id for test in current_user.get_assigned_tests()]
-        experiments_query = experiments_query.filter(Experiment.test_id.in_(user_test_ids))
+    if current_user.is_admin():
+        # Admins see all experiments
+        experiments_query = Experiment.query
+    else:
+        # Researchers see only experiments from their assigned projects
+        accessible_project_names = current_user.get_accessible_project_names()
+        if accessible_project_names:
+            experiments_query = Experiment.query.filter(
+                Experiment.project_name.in_(accessible_project_names)
+            )
+        else:
+            # No accessible projects = no experiments
+            experiments_query = Experiment.query.filter(False)
 
     # Apply project filter if specified
     if project_filter:
@@ -138,9 +152,14 @@ def experiments():
         page=page, per_page=per_page, error_out=False
     )
     
-    # Get available projects for the filter dropdown
+    # Get available projects for the filter dropdown (only user's accessible projects)
     from app.models.project import Project
-    available_projects = Project.get_all_projects()
+    if current_user.is_admin():
+        available_projects = Project.get_all_projects()
+    else:
+        # Only show projects the user has access to
+        accessible_project_names = current_user.get_accessible_project_names()
+        available_projects = [Project.get_project_by_name(name) for name in accessible_project_names if Project.get_project_by_name(name)]
 
     return render_template('main/all_experiments.html',
                          experiments=experiments,
@@ -195,3 +214,7 @@ def debug_test():
     print(f"DEBUG: {message}")
     
     return f"<h1>Debug Test</h1><p>{message}</p>"
+
+
+
+

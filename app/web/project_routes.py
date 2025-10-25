@@ -200,11 +200,9 @@ def project_statistics():
     """View project statistics"""
     try:
         stats = Experiment.get_project_statistics()
-        total_experiments = sum(count for _, count in stats)
         
         return render_template('admin/project_statistics.html',
-                             stats=stats,
-                             total_experiments=total_experiments)
+                             stats=stats)
     except Exception as e:
         logger.error(f"Error loading project statistics: {e}")
         flash('Error loading project statistics', 'error')

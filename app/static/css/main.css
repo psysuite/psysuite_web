@@ -304,4 +304,41 @@ body {
     .test-actions {
         justify-content: center;
     }
+}/* Ps
+ySuite Versions Button */
+.btn-versions {
+    background-color: #9b59b6;
+    color: white;
+}
+
+.btn-versions:hover {
+    background-color: #8e44ad;
+    color: white;
+}
+
+/* Mobile App Version Cards */
+.version-card {
+    border-left: 4px solid #9b59b6;
+}
+
+.version-card.latest {
+    border-left-color: #27ae60;
+}
+
+/* APK Upload Form */
+.apk-upload-zone {
+    border: 2px dashed #bdc3c7;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    transition: border-color 0.3s;
+}
+
+.apk-upload-zone:hover {
+    border-color: #9b59b6;
+}
+
+.apk-upload-zone.dragover {
+    border-color: #27ae60;
+    background-color: #f8f9fa;
 }

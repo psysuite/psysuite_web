@@ -24,7 +24,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <i class="fas fa-folder fa-2x text-primary mb-2"></i>
-                    <h4 class="card-title">{{ stats|length }}</h4>
+                    <h4 class="card-title">{{ stats.total_projects if stats else 0 }}</h4>
                     <p class="card-text text-muted">Total Projects</p>
                 </div>
             </div>
@@ -33,7 +33,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <i class="fas fa-flask fa-2x text-success mb-2"></i>
-                    <h4 class="card-title">{{ total_experiments }}</h4>
+                    <h4 class="card-title">{{ stats.total_experiments if stats else 0 }}</h4>
                     <p class="card-text text-muted">Total Experiments</p>
                 </div>
             </div>
@@ -43,8 +43,8 @@
                 <div class="card-body">
                     <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
                     <h4 class="card-title">
-                        {% if stats|length > 0 %}
-                            {{ "%.1f"|format(total_experiments / stats|length) }}
+                        {% if stats and stats.total_projects > 0 %}
+                            {{ "%.1f"|format(stats.total_experiments / stats.total_projects) }}
                         {% else %}
                             0
                         {% endif %}
@@ -56,15 +56,9 @@
         <div class="col-md-3">
             <div class="card text-center">
                 <div class="card-body">
-                    <i class="fas fa-star fa-2x text-warning mb-2"></i>
-                    <h4 class="card-title">
-                        {% if stats %}
-                            {{ stats[0][1] }}
-                        {% else %}
-                            0
-                        {% endif %}
-                    </h4>
-                    <p class="card-text text-muted">Most Active</p>
+                    <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                    <h4 class="card-title">{{ stats.no_project_experiments if stats else 0 }}</h4>
+                    <p class="card-text text-muted">No Project</p>
                 </div>
             </div>
         </div>
@@ -76,57 +70,54 @@
             <h5 class="mb-0">Experiments by Project</h5>
         </div>
         <div class="card-body">
-            {% if stats %}
+            {% if stats and stats.projects %}
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>Rank</th>
                             <th>Project Name</th>
-                            <th>Experiments</th>
-                            <th>Percentage</th>
-                            <th>Progress Bar</th>
+                            <th>Total Experiments</th>
+                            <th>Completed</th>
+                            <th>Completion Rate</th>
+                            <th>Recent Activity</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for project_name, count in stats %}
-                        {% set percentage = (count / total_experiments * 100) if total_experiments > 0 else 0 %}
+                        {% for project in stats.projects %}
                         <tr>
                             <td>
                                 <span class="badge bg-secondary">{{ loop.index }}</span>
                             </td>
                             <td>
-                                <strong>{{ project_name }}</strong>
+                                <strong>{{ project.name }}</strong>
                             </td>
                             <td>
-                                <span class="badge bg-primary">{{ count }}</span>
+                                <span class="badge bg-primary">{{ project.total_experiments }}</span>
                             </td>
                             <td>
-                                {{ "%.1f"|format(percentage) }}%
+                                <span class="badge bg-success">{{ project.completed_experiments }}</span>
                             </td>
                             <td>
-                                <div class="progress" style="height: 20px;">
+                                <div class="progress" style="height: 20px; width: 100px;">
                                     <div class="progress-bar" role="progressbar" 
-                                         style="width: {{ percentage }}%"
-                                         aria-valuenow="{{ percentage }}" 
+                                         style="width: {{ project.completion_rate }}%"
+                                         aria-valuenow="{{ project.completion_rate }}" 
                                          aria-valuemin="0" 
                                          aria-valuemax="100">
+                                        {{ "%.1f"|format(project.completion_rate) }}%
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                {% if project_name != 'No Project' %}
-                                <a href="{{ url_for('web.experiments') }}?project={{ project_name|urlencode }}" 
+                                <span class="badge bg-info">{{ project.recent_experiments }}</span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('web.experiments') }}?project={{ project.name|urlencode }}" 
                                    class="btn btn-sm btn-outline-primary" title="View experiments">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                {% else %}
-                                <a href="{{ url_for('web.experiments') }}?project=none" 
-                                   class="btn btn-sm btn-outline-secondary" title="View unassigned experiments">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -175,19 +166,20 @@
 <script>
 function exportStatistics() {
     // Create CSV content
-    let csvContent = "Project Name,Experiments,Percentage\n";
+    let csvContent = "Project Name,Total Experiments,Completed Experiments,Completion Rate,Recent Activity\n";
     
-    {% for project_name, count in stats %}
-    {% set percentage = (count / total_experiments * 100) if total_experiments > 0 else 0 %}
-    csvContent += "{{ project_name|replace('"', '""') }},{{ count }},{{ "%.1f"|format(percentage) }}\n";
+    {% if stats and stats.projects %}
+    {% for project in stats.projects %}
+    csvContent += "{{ project.name|replace('"', '""') }},{{ project.total_experiments }},{{ project.completed_experiments }},{{ "%.1f"|format(project.completion_rate) }},{{ project.recent_experiments }}\n";
     {% endfor %}
+    {% endif %}
     
     // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'project_statistics.csv';
+    a.download = 'project_statistics_' + new Date().toISOString().split('T')[0] + '.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

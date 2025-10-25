@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}PsySuite Version Details - PsySuite Web Manager{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>PsySuite Version Details</h2>
+        <div>
+            <a href="{{ url_for('api.psysuite_versions') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Versions
+            </a>
+            <a href="{{ url_for('api.psysuite_application_new') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Upload New Version
+            </a>
+        </div>
+    </div>
+
+    {% if mobile_application %}
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-mobile-alt"></i> 
+                        PsySuite {{ mobile_application.sver }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Version String:</strong></div>
+                        <div class="col-sm-8">{{ mobile_application.sver }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Version Code:</strong></div>
+                        <div class="col-sm-8">{{ mobile_application.version }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Created:</strong></div>
+                        <div class="col-sm-8">{{ mobile_application.created_at.strftime('%Y-%m-%d %H:%M:%S') if mobile_application.created_at else 'Unknown' }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Created By:</strong></div>
+                        <div class="col-sm-8">{{ mobile_application.created_by or 'Unknown' }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>APK File:</strong></div>
+                        <div class="col-sm-8">
+                            {% if mobile_application.apk_path %}
+                            <code>{{ mobile_application.apk_path.split('/')[-1] }}</code>
+                            {% else %}
+                            <span class="text-muted">No file path</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if mobile_application.description %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Description</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ mobile_application.description }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('api.psysuite_apk') }}" class="btn btn-success">
+                            <i class="fas fa-download"></i> Download APK
+                        </a>
+                        <button class="btn btn-info" onclick="copyUpdateUrl()">
+                            <i class="fas fa-copy"></i> Copy Update URL
+                        </button>
+                        <button class="btn btn-secondary" onclick="testUpdate()">
+                            <i class="fas fa-test-tube"></i> Test Update Check
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Update Information</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Update Check URL:</p>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="updateUrl" 
+                               value="{{ request.host_url }}api/psysuitestableupdate.xml" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyUpdateUrl()">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        No PsySuite application version found. 
+        <a href="{{ url_for('api.psysuite_application_new') }}">Upload the first version</a>.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyUpdateUrl() {
+    const urlInput = document.getElementById('updateUrl');
+    urlInput.select();
+    urlInput.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        document.execCommand('copy');
+        showAlert('Update URL copied to clipboard', 'success');
+    } catch (err) {
+        showAlert('Failed to copy URL', 'error');
+    }
+}
+
+function testUpdate() {
+    const updateUrl = '{{ request.host_url }}api/psysuitestableupdate.xml';
+    
+    fetch(updateUrl)
+        .then(response => {
+            if (response.ok) {
+                return response.text();
+            }
+            throw new Error('Network response was not ok');
+        })
+        .then(data => {
+            showAlert('Update check successful', 'success');
+            console.log('Update XML:', data);
+        })
+        .catch(error => {
+            showAlert('Update check failed: ' + error.message, 'error');
+            console.error('Error:', error);
+        });
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const content = document.querySelector('.content');
+    content.insertBefore(alertDiv, content.firstChild);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

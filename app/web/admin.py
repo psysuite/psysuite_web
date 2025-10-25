@@ -2,7 +2,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app.web import bp
 from app.models.test import Test
-from app.models.user import User
+from app.models.user import User, ProjectAssignment
 from app.models.dynamic_models import create_trial_table, drop_trial_table
 from app.utils.decorators import admin_required
 from app import db
@@ -211,3 +211,47 @@ def create_user():
 
 
 
+
+@bp.route('/admin/user/<int:user_id>/assign-projects', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def assign_projects(user_id):
+    """Assign projects to user"""
+    from app.models.project import Project
+    
+    user = User.query.get_or_404(user_id)
+    
+    if user.is_admin():
+        flash('Admin users have access to all projects automatically', 'info')
+        return redirect(url_for('web.users'))
+    
+    if request.method == 'POST':
+        try:
+            project_ids = request.form.getlist('project_ids')
+            project_ids = [int(id) for id in project_ids if id.isdigit()]
+            
+            # Remove existing assignments
+            ProjectAssignment.query.filter_by(user_id=user_id).delete()
+            
+            # Add new assignments
+            for project_id in project_ids:
+                if Project.query.get(project_id):  # Verify project exists
+                    assignment = ProjectAssignment(user_id=user_id, project_id=project_id)
+                    db.session.add(assignment)
+            
+            db.session.commit()
+            flash('Project assignments updated successfully', 'success')
+            return redirect(url_for('web.users'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating assignments: {str(e)}', 'error')
+    
+    # Get current assignments
+    current_assignments = [a.project_id for a in user.project_assignments]
+    all_projects = Project.query.all()
+    
+    return render_template('admin/assign_projects.html', 
+                         user=user, 
+                         all_projects=all_projects, 
+                         current_assignments=current_assignments)
