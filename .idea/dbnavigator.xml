@@ -37,9 +37,7 @@
     <last-used-providers />
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">
-    <open-files>
-      <object connection-id="4b07c227-b2fe-4706-b69e-e24eeb02bd6a" object-ref="schemas/public/tables/experiments" />
-    </open-files>
+    <open-files />
   </component>
   <component name="DBNavigator.Project.DatabaseSessionManager">
     <connection id="4b07c227-b2fe-4706-b69e-e24eeb02bd6a" />

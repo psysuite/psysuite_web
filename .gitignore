@@ -80,6 +80,9 @@ debug.py
 
 # Backup files
 *.bak
+
+# Other stuff
+OT/
 *.backup
 data_export*.json
 
