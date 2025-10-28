@@ -2,8 +2,8 @@
 User service module containing business logic for user operations.
 This separates the business logic from the API request handling.
 """
-from app.models.user import User, TestAssignment
-from app.models.test import Test
+from app.models.user import User, ProjectAssignment
+from app.models.project import Project
 from app import db
 import logging
 import re
@@ -43,7 +43,7 @@ def get_user_by_id_service(user_id):
             return False, 'User not found', 404
         
         user_data = user.to_dict()
-        user_data['assigned_tests'] = [test.to_dict() for test in user.get_assigned_tests()]
+        user_data['assigned_projects'] = [assignment.project.to_dict() for assignment in user.project_assignments]
         
         return True, user_data, None
         

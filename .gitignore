@@ -41,6 +41,7 @@ app.db
 .env.local
 .env.development
 .env.production
+.env.docker
 
 # IDE
 .idea/
@@ -48,6 +49,7 @@ app.db
 *.swp
 *.swo
 *~
+.qodo/
 
 # Logs
 logs/
@@ -63,8 +65,8 @@ ehthumbs.db
 Thumbs.db
 
 # Development files (should not be in production)
-scripts/db/
-scripts/tests/
+#scripts/db/
+#scripts/tests/
 debug.py
 *_test.py
 
@@ -86,3 +88,5 @@ OT/
 *.backup
 data_export*.json
 
+/scripts/tests/htmlcov/
+/scripts/tests/.coverage

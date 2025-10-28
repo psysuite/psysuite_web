@@ -78,9 +78,10 @@ def test_upload_validation(client):
     }
     
     response = client.post('/api/upload/validate', 
-                         json=test_data)
+                         json=test_data,
+                         headers={'X-API-Key': 'test-api-key'})
     
-    # Should work without authentication for validation
+    # Should work with API key authentication
     assert response.status_code == 200
     
     validation_result = response.json

@@ -1,6 +1,7 @@
 """User management functionality tests."""
 import json
-from app.models.user import User, TestAssignment
+from app.models.user import User, ProjectAssignment
+from app.models.project import Project
 from app import db
 
 
@@ -101,26 +102,20 @@ class TestUserManagement:
         user_emails = [user['email'] for user in data['users']]
         assert 'delete@test.com' not in user_emails
     
-    def test_assign_test_to_user(self, client, admin_user, app):
-        """Test assigning a test to a user."""
-        # Create user and test within the test context
+    def test_assign_project_to_user(self, client, admin_user, app):
+        """Test assigning a project to a user."""
+        # Create user and project within the test context
         with app.app_context():
             user = User(email='assign@test.com', role='researcher')
             user.set_password('password123')
             db.session.add(user)
             
-            from app.models.test import Test
-            test = Test(
-                name='Assignment Test',
-                class_name='test.class',
-                description='Test for assignment',
-                status='development'
-            )
-            db.session.add(test)
+            project = Project(name='Test Project', created_by='admin')
+            db.session.add(project)
             db.session.commit()
             
             user_id = user.id
-            test_id = test.id
+            project_id = project.id
         
         # Login as admin
         client.post('/api/auth/login', json={
@@ -129,36 +124,30 @@ class TestUserManagement:
         })
         
         assignment_data = {
-            'test_ids': [test_id]
+            'project_ids': [project_id]
         }
         
-        response = client.put(f'/api/users/{user_id}/tests', json=assignment_data)
+        response = client.put(f'/api/users/{user_id}/projects', json=assignment_data)
         assert response.status_code == 200
         
         data = json.loads(response.data)
         assert 'message' in data
     
     def test_get_user_assignments(self, client, admin_user, app):
-        """Test getting all test assignments for a user."""
+        """Test getting all project assignments for a user."""
         with app.app_context():
-            # Create user, test, and assignment
+            # Create user, project, and assignment
             user = User(email='assignments@test.com', role='researcher')
             user.set_password('password123')
             db.session.add(user)
             
-            from app.models.test import Test
-            test = Test(
-                name='Assignment Test',
-                class_name='test.class',
-                description='Test for assignment',
-                status='development'
-            )
-            db.session.add(test)
+            project = Project(name='Assignment Project', created_by='admin')
+            db.session.add(project)
             db.session.commit()
             
-            assignment = TestAssignment(
+            assignment = ProjectAssignment(
                 user_id=user.id,
-                test_id=test.id
+                project_id=project.id
             )
             db.session.add(assignment)
             db.session.commit()
@@ -171,34 +160,28 @@ class TestUserManagement:
             'password': 'test-admin-password'
         })
         
-        response = client.get(f'/api/users/{user_id}/tests')
+        response = client.get(f'/api/users/{user_id}/projects')
         assert response.status_code == 200
         
         data = json.loads(response.data)
-        assert 'assigned_tests' in data
-        assert len(data['assigned_tests']) >= 1
+        assert 'assigned_projects' in data
+        assert len(data['assigned_projects']) >= 1
     
-    def test_remove_test_assignment(self, client, admin_user, app):
-        """Test removing a test assignment from a user."""
+    def test_remove_project_assignment(self, client, admin_user, app):
+        """Test removing a project assignment from a user."""
         with app.app_context():
-            # Create user, test, and assignment
+            # Create user, project, and assignment
             user = User(email='remove@test.com', role='researcher')
             user.set_password('password123')
             db.session.add(user)
             
-            from app.models.test import Test
-            test = Test(
-                name='Remove Test',
-                class_name='test.class',
-                description='Test for removal',
-                status='development'
-            )
-            db.session.add(test)
+            project = Project(name='Remove Project', created_by='admin')
+            db.session.add(project)
             db.session.commit()
             
-            assignment = TestAssignment(
+            assignment = ProjectAssignment(
                 user_id=user.id,
-                test_id=test.id
+                project_id=project.id
             )
             db.session.add(assignment)
             db.session.commit()
@@ -211,31 +194,24 @@ class TestUserManagement:
             'password': 'test-admin-password'
         })
         
-        # The API decorator doesn't allow empty test_ids, so let's test removal by
-        # creating another test and then only assigning that one (effectively removing the first)
+        # Create another project and assign only that one (removing the first)
         with app.app_context():
-            # Create another test
-            test2 = Test(
-                name='Another Test',
-                class_name='test.class2',
-                description='Another test',
-                status='development'
-            )
-            db.session.add(test2)
+            project2 = Project(name='Another Project', created_by='admin')
+            db.session.add(project2)
             db.session.commit()
-            test2_id = test2.id
+            project2_id = project2.id
         
-        # Update assignments to only include the new test (removing the old one)
-        response = client.put(f'/api/users/{user_id}/tests', json={'test_ids': [test2_id]})
+        # Update assignments to only include the new project (removing the old one)
+        response = client.put(f'/api/users/{user_id}/projects', json={'project_ids': [project2_id]})
         assert response.status_code == 200
         
         # Verify the original assignment is removed and only the new one remains
-        response = client.get(f'/api/users/{user_id}/tests')
+        response = client.get(f'/api/users/{user_id}/projects')
         assert response.status_code == 200
         
         data = json.loads(response.data)
-        assert len(data['assigned_tests']) == 1
-        assert data['assigned_tests'][0]['name'] == 'Another Test'
+        assert len(data['assigned_projects']) == 1
+        assert data['assigned_projects'][0]['name'] == 'Another Project'
     
     def test_researcher_cannot_access_user_management(self, client, app):
         """Test that researchers cannot access user management endpoints."""

@@ -105,8 +105,6 @@ class Experiment(db.Model):
         """Get project name for display"""
         if self.project_name:
             return self.project_name
-        elif self.project:
-            return self.project.name
         else:
             return 'No Project'
     

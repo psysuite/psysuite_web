@@ -212,37 +212,52 @@ class TestTestManagement:
         response = client.post('/api/tests', json=test_data)
         assert response.status_code == 403
     
-    def test_researcher_can_view_assigned_tests(self, client, app):
-        """Test that researchers can view tests assigned to them."""
+    def test_researcher_can_view_experiments_from_assigned_projects(self, client, app):
+        """Test that researchers can view experiments from their assigned projects."""
         with app.app_context():
-            # Create researcher user and test
-            from app.models.user import User, TestAssignment
+            # Create researcher user, project, and experiment
+            from app.models.user import User, ProjectAssignment
+            from app.models.project import Project
+            from app.models.experiment import Experiment
+            
             user = User(email='researcher_view@test.com', role='researcher')
             user.set_password('password123')
             db.session.add(user)
             
             test = Test(
-                name='Assigned Test',
-                class_name='test.assigned.TestAssigned',
-                description='Test assigned to researcher',
-                status='production',  # Researchers can only see production tests
+                name='Project Test',
+                class_name='test.project.TestProject',
+                description='Test for project-based access',
+                status='production',
                 trial_columns={
                     'response_time': 'integer',
                     'accuracy': 'float'
                 }
             )
             db.session.add(test)
+            
+            project = Project(name='Researcher Project', created_by='admin')
+            db.session.add(project)
             db.session.commit()
             
-            # Assign test to researcher
-            assignment = TestAssignment(
+            # Assign project to researcher
+            assignment = ProjectAssignment(
                 user_id=user.id,
-                test_id=test.id
+                project_id=project.id
             )
             db.session.add(assignment)
-            db.session.commit()
             
-            test_name = test.name
+            # Create experiment in the project
+            experiment = Experiment(
+                exp_uid='test_exp_001',
+                test_id=test.id,
+                project_name=project.name,
+                label='Test Subject',
+                age=25,
+                gender=1
+            )
+            db.session.add(experiment)
+            db.session.commit()
         
         # Login as researcher
         client.post('/api/auth/login', json={
@@ -250,10 +265,10 @@ class TestTestManagement:
             'password': 'password123'
         })
         
-        response = client.get('/api/tests')
+        response = client.get('/api/experiments')
         assert response.status_code == 200
         
         data = json.loads(response.data)
-        # Should see assigned tests
-        test_names = [test['name'] for test in data['tests']]
-        assert test_name in test_names
+        # Should see experiments from assigned projects
+        experiment_uids = [exp['exp_uid'] for exp in data['experiments']]
+        assert 'test_exp_001' in experiment_uids

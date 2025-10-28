@@ -39,8 +39,9 @@ def get_test(test_id):
     try:
         test = Test.query.get_or_404(test_id)
         
-        # Check access permissions
-        if not current_user.has_test_access(test_id):
+        # Admin users can access all tests, researchers can access all tests too
+        # (access control is now at the experiment level based on projects)
+        if not current_user.is_admin() and not current_user.is_researcher():
             return jsonify({'error': 'Access denied'}), 403
         
         return jsonify(test.to_dict(include_experiments=True)), 200

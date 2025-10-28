@@ -16,10 +16,11 @@ class TestExperimentManagement:
             
             test = Test(
                 name='Upload Test',
-                class_name='iit.uvip.psysuite.core.tests.upload.TestUpload',
+                class_name='TestUpload',
                 description='Test for upload',
                 status='development',
                 trial_columns={
+                    'label': 'string',
                     'response_time': 'integer',
                     'accuracy': 'float',
                     'stimulus': 'string'
@@ -58,12 +59,14 @@ class TestExperimentManagement:
             "trials": [
                 {
                     "trid": 1,
+                    "label":"a",
                     "response_time": 450,
                     "accuracy": 0.95,
                     "stimulus": "visual"
                 },
                 {
                     "trid": 2,
+                    "label":"a",
                     "response_time": 520,
                     "accuracy": 0.80,
                     "stimulus": "auditory"
@@ -71,7 +74,9 @@ class TestExperimentManagement:
             ]
         }
         
-        response = client.post('/api/upload/experiment', json=experiment_data)
+        response = client.post('/api/upload/experiment', 
+                              json=experiment_data,
+                              headers={'X-API-Key': 'test-api-key'})
         assert response.status_code == 201
         
         data = json.loads(response.data)
@@ -87,7 +92,7 @@ class TestExperimentManagement:
             
             test = Test(
                 name='Duplicate Test',
-                class_name='iit.uvip.psysuite.core.tests.duplicate.TestDuplicate',
+                class_name='TestDuplicate',
                 description='Test for duplicate upload',
                 status='development',
                 trial_columns={'response_time': 'integer'}
@@ -109,11 +114,15 @@ class TestExperimentManagement:
         }
         
         # Upload first time
-        response1 = client.post('/api/upload/experiment', json=experiment_data)
+        response1 = client.post('/api/upload/experiment', 
+                               json=experiment_data,
+                               headers={'X-API-Key': 'test-api-key'})
         assert response1.status_code == 201
         
         # Upload second time (should be conflict)
-        response2 = client.post('/api/upload/experiment', json=experiment_data)
+        response2 = client.post('/api/upload/experiment', 
+                               json=experiment_data,
+                               headers={'X-API-Key': 'test-api-key'})
         assert response2.status_code == 409
     
     def test_upload_experiment_invalid_test(self, client):
@@ -126,7 +135,9 @@ class TestExperimentManagement:
             "trials": [{"trid": 1, "response_time": 450}]
         }
         
-        response = client.post('/api/upload/experiment', json=experiment_data)
+        response = client.post('/api/upload/experiment', 
+                              json=experiment_data,
+                              headers={'X-API-Key': 'test-api-key'})
         assert response.status_code == 404
     
     def test_get_all_experiments(self, client, admin_user, app):

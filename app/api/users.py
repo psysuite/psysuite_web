@@ -145,46 +145,69 @@ def delete_user(user_id):
         return jsonify({'error': 'Internal server error'}), 500
 
 
-@bp.route('/users/<int:user_id>/tests', methods=['GET'])
+@bp.route('/users/<int:user_id>/projects', methods=['GET'])
 @admin_required
-@log_access('view_user_tests')
-def get_user_tests(user_id):
-    """Get user's assigned tests"""
+@log_access('view_user_projects')
+def get_user_projects(user_id):
+    """Get user's assigned projects"""
     try:
-        from app.services.user_service import get_user_tests_service
-        success, result, error_code = get_user_tests_service(user_id)
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
         
-        if not success:
-            return jsonify({'error': result}), error_code
+        # Get assigned projects
+        assigned_projects = [assignment.project.to_dict() for assignment in user.project_assignments]
         
-        return jsonify(result), 200
+        # Get all available projects
+        from app.models.project import Project
+        all_projects = [project.to_dict() for project in Project.get_all_projects()]
+        
+        return jsonify({
+            'assigned_projects': assigned_projects,
+            'all_projects': all_projects
+        }), 200
         
     except Exception as e:
-        logging.error(f"Get user tests error: {e}")
+        logging.error(f"Get user projects error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
 
-@bp.route('/users/<int:user_id>/tests', methods=['PUT'])
+@bp.route('/users/<int:user_id>/projects', methods=['PUT'])
 @admin_required
-@validate_json(['test_ids'])
-@log_access('update_user_tests')
-def update_user_tests(user_id):
-    """Update user's test assignments"""
+@validate_json()  # Remove required field validation to allow empty lists
+@log_access('update_user_projects')
+def update_user_projects(user_id):
+    """Update user's project assignments"""
     try:
         data = request.get_json()
-        test_ids = data.get('test_ids', [])
+        project_ids = data.get('project_ids', [])
         
-        # Use service to update user tests
-        from app.services.user_service import update_user_tests_service
-        success, result, error_code = update_user_tests_service(user_id, test_ids)
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
         
-        if not success:
-            return jsonify({'error': result}), error_code
+        # Remove existing assignments
+        from app.models.user import ProjectAssignment
+        ProjectAssignment.query.filter_by(user_id=user_id).delete()
         
-        return jsonify(result), 200
+        # Add new assignments
+        from app.models.project import Project
+        for project_id in project_ids:
+            project = Project.query.get(project_id)
+            if project:
+                assignment = ProjectAssignment(user_id=user_id, project_id=project_id)
+                db.session.add(assignment)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Project assignments updated successfully',
+            'assigned_project_ids': project_ids
+        }), 200
         
     except Exception as e:
-        logging.error(f"Update user tests error: {e}")
+        logging.error(f"Update user projects error: {e}")
+        db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
 
 

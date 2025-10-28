@@ -6,9 +6,8 @@ load_dotenv(os.path.join(basedir, '.env'))
 
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(basedir, 'app.db')
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Mail settings
@@ -19,8 +18,8 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     
     # Admin settings
-    ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL') or 'alberto.inuggi@gmail.com'
-    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or 'antares'
+    ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL')
+    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
     
     # Upload settings
     MAX_CONTENT_LENGTH = 200 * 1024 * 1024  # 200MB max file size (for APK uploads)
@@ -35,14 +34,12 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-        'sqlite:///' + os.path.join(basedir, 'app-dev.db')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL')
 
 
 class ProductionConfig(Config):
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://user:password@localhost/psysuite_web'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
 
 
 class TestingConfig(Config):

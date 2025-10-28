@@ -73,7 +73,7 @@ def get_current_user():
     try:
         return jsonify({
             'user': current_user.to_dict(),
-            'assigned_tests': [test.to_dict() for test in current_user.get_assigned_tests()]
+            'assigned_projects': [assignment.project.to_dict() for assignment in current_user.project_assignments]
         }), 200
         
     except Exception as e:

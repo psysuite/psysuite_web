@@ -22,12 +22,13 @@ def app():
         'SECRET_KEY': 'test-secret-key',
         'ADMIN_EMAIL': 'admin@test.com',
         'ADMIN_PASSWORD': 'test-admin-password',
+        'PSYSUITE_API_KEY': 'test-api-key',  # Add API key for upload tests
         'MAIL_SERVER': None,
         'MAIL_PORT': 587,
         'MAIL_USE_TLS': False,
         'MAIL_USERNAME': None,
         'MAIL_PASSWORD': None,
-        'MAX_CONTENT_LENGTH': 16 * 1024 * 1024,
+        'MAX_CONTENT_LENGTH': 200 * 1024 * 1024,  # Updated to match current config
         'PERMANENT_SESSION_LIFETIME': 3600
     })
     
