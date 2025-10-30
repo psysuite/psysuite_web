@@ -44,21 +44,21 @@ def main():
     
     if args.category == 'db':
         if args.action == 'clear':
-            return run_script(os.path.join(script_dir, 'db', 'clear_db.py'))
+            return run_script(os.path.join(script_dir, 'db', 'dev_clear_db.py'))
         elif args.action == 'export':
             script_args = [args.file] if args.file else []
-            return run_script(os.path.join(script_dir, 'db', 'export_data.py'), script_args)
+            return run_script(os.path.join(script_dir, 'db', 'dev_export_data.py'), script_args)
         elif args.action == 'recreate':
-            return run_script(os.path.join(script_dir, 'db', 'recreate_db.py'))
+            return run_script(os.path.join(script_dir, 'db', 'dev_recreate_db.py'))
         elif args.action == 'import':
             if not args.file:
                 print("Error: --file is required for import")
                 return 1
             script_args = [args.file, args.env]
-            return run_script(os.path.join(script_dir, 'db', 'import_data.py'), script_args)
+            return run_script(os.path.join(script_dir, 'db', 'dev_import_data.py'), script_args)
     
     elif args.category == 'debug':
-        return run_script(os.path.join(script_dir, 'debug.py'))
+        return run_script(os.path.join(script_dir, 'run_debug.py'))
 
     elif args.category == 'test':
         if args.action == 'all':

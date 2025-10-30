@@ -18,5 +18,8 @@ if __name__ == '__main__':
     config_name = os.getenv('FLASK_CONFIG', 'default')
     debug_mode = config_name == 'development'
     
+    # Use different ports for different environments
+    port = 5001 if config_name == 'development' else 5000
+    
     # Disable reloader when debugging to allow PyCharm breakpoints
-    app.run(debug=debug_mode, host='0.0.0.0', port=5000, use_reloader=False)
+    app.run(debug=debug_mode, host='0.0.0.0', port=port, use_reloader=False)

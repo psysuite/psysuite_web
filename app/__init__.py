@@ -53,22 +53,17 @@ def create_app(config_name='default', skip_db_init=False):
             from app.models.project import Project
             from app.models.dynamic_models import initialize_existing_tests
             
-            # Create tables
-            db.create_all()
+            # Skip automatic table creation and admin user creation
+            # These will be handled by init_db.py script
+            pass
             
-            # Create default admin user if it doesn't exist
-            admin = User.query.filter_by(email=app.config['ADMIN_EMAIL']).first()
-            if not admin:
-                admin = User(
-                    email=app.config['ADMIN_EMAIL'],
-                    role='admin'
-                )
-                admin.set_password(app.config['ADMIN_PASSWORD'])
-                db.session.add(admin)
-                db.session.commit()
-            
-            # Initialize existing trial models
-            initialize_existing_tests()
+            # Initialize existing trial models (with error handling for fresh databases)
+            try:
+                initialize_existing_tests()
+            except Exception as e:
+                # This is expected on fresh databases where tables don't exist yet
+                print(f"Note: Could not initialize existing tests (expected on fresh database): {e}")
+                pass
     
     return app
 

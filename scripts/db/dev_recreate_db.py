@@ -17,7 +17,8 @@ from app.models.experiment import Experiment
 
 def recreate_database_postgres():
     """Recreate database with proper schema for PostgreSQL"""
-    # Create app without auto-initialization to avoid premature admin creation
+    # Create app without auto-initialization to avoid premature admin creation.
+    # user would be eliminated now
     app = create_app('development', skip_db_init=True)
 
     with app.app_context():
@@ -144,7 +145,7 @@ def recreate_database_postgres_full():
     # Database connection details from config
     db_name = "psysuite_dev"
     db_user = "psysuite_user"
-    
+
     print(f"Completely recreating PostgreSQL database '{db_name}'...")
     
     try:
@@ -194,7 +195,7 @@ def recreate_database_postgres_full():
 
 if __name__ == '__main__':
     import sys
-    
+
     if len(sys.argv) > 1 and sys.argv[1] == '--full':
         recreate_database_postgres_full()
     elif len(sys.argv) > 1 and sys.argv[1] == '--sqlite':

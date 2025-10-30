@@ -126,6 +126,29 @@ def psysuitestableupdate():
         abort(500)
 
 
+@bp.route('/psysuitestableupdate_plain.xml')
+def get_update_plain():
+    """Plain HTTP version of update XML for Android compatibility"""
+    try:
+        logging.info("PsySuite plain HTTP update check requested")
+        mobile_application = PsysuiteApplication.get_latest()
+        
+        if not mobile_application:
+            logging.warning("No PsySuite versions available")
+            return Response('<?xml version="1.0"?><error>No versions available</error>',
+                          mimetype='application/xml'), 404
+        
+        xml_response = mobile_application.stableupdate(request.host_url)
+        logging.info(f"Serving plain HTTP update info for version {mobile_application.version}")
+        
+        return Response(response=xml_response, status=200, mimetype="application/xml")
+        
+    except Exception as e:
+        logging.error(f"Error serving plain HTTP update XML: {e}")
+        return Response(f'<?xml version="1.0"?><error>{str(e)}</error>',
+                       mimetype='application/xml'), 500
+
+
 @bp.route('/psysuite.apk')
 def psysuite_apk():
     """Download endpoint for latest PsySuite APK"""

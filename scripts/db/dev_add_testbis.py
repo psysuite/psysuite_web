@@ -50,44 +50,30 @@ def add_testbis_test():
     db.session.commit()
 
     print("✅ TestBIS test created successfully")
+    
+    # Verify trial table was created (the event listener should have handled this)
+    success, message = testbis.create_trial_table()
+    if success:
+        print("✅ Trial table verified/created successfully")
+    else:
+        print(f"⚠️  Trial table issue: {message}")
+    
     return testbis
 
 
-def create_testbis_trials_table():
-    """Create testbis_trials table if it doesn't exist"""
-
-    # Check if table already exists
+def verify_testbis_trials_table(testbis_test):
+    """Verify testbis_trials table exists"""
+    
+    print("🔍 Verifying testbis_trials table...")
+    
+    # Check if table exists
     inspector = db.inspect(db.engine)
     if 'testbis_trials' in inspector.get_table_names():
-        print("✅ testbis_trials table already exists")
-        return
-
-    print("📝 Creating testbis_trials table...")
-
-    # Create testbis_trials table
-    create_table_sql = """
-    CREATE TABLE testbis_trials (
-        id SERIAL PRIMARY KEY,
-        experiment_id INTEGER NOT NULL,
-        trid INTEGER,
-        created_at TIMESTAMP,
-        label VARCHAR(255),
-        lat INTEGER,
-        confl VARCHAR(255),
-        res BOOLEAN,
-        cor_ans INTEGER,
-        user_ans INTEGER,
-        elapsed BIGINT,
-        rep INTEGER,
-        confl_magn DOUBLE PRECISION,
-        FOREIGN KEY (experiment_id) REFERENCES experiments(id) ON DELETE CASCADE
-    );
-    """
-
-    db.session.execute(text(create_table_sql))
-    db.session.commit()
-
-    print("✅ testbis_trials table created successfully")
+        print("✅ testbis_trials table exists")
+        return True
+    else:
+        print("❌ testbis_trials table does not exist")
+        return False
 
 
 def main():
@@ -97,15 +83,30 @@ def main():
     config_name = os.getenv('FLASK_CONFIG', 'development')
     print(f"🚀 Adding TestBIS to {config_name} database...")
 
-    app = create_app(config_name)
+    # Create app with skip_db_init to avoid conflicts with running server
+    app = create_app(config_name, skip_db_init=True)
 
     with app.app_context():
         try:
-            # Add TestBIS test
+            # Test database connection first
+            print("🔍 Testing database connection...")
+            db.session.execute(text('SELECT 1'))
+            print("✅ Database connection successful")
+            
+            # Check if server is running by looking for existing connections
+            result = db.session.execute(text("SELECT count(*) FROM pg_stat_activity WHERE datname = current_database()"))
+            connection_count = result.scalar()
+            print(f"🔍 Database connections: {connection_count}")
+            
+            # Add TestBIS test (trial table will be created automatically)
             testbis = add_testbis_test()
 
-            # Create testbis_trials table
-            create_testbis_trials_table()
+            # Verify testbis_trials table was created
+            table_exists = verify_testbis_trials_table(testbis)
+            
+            if not table_exists:
+                print("⚠️  Trial table was not created automatically, this might indicate an issue")
+                print("   The table should have been created by the Test model events or explicit call")
 
             print(f"\n🎉 TestBIS setup complete!")
             print(f"   - Test ID: {testbis.id}")
@@ -119,6 +120,12 @@ def main():
             print(f"❌ Error: {e}")
             import traceback
             traceback.print_exc()
+            
+            # Additional debugging info
+            print("\n🔍 Debug information:")
+            print(f"   - Config: {config_name}")
+            print(f"   - Database URL: {app.config.get('SQLALCHEMY_DATABASE_URI', 'NOT SET')[:50]}...")
+            
             sys.exit(1)
 
 

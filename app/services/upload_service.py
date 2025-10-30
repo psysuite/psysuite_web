@@ -132,8 +132,23 @@ def upload_experiment_service(exp_uid, test_class_name, configuration, trials, d
         if trials:
             trial_model = get_trial_model(test.class_name)  # Use test.class_name for trial table operations
             if not trial_model:
+                # Trial model not found in registry - try to create it from the test configuration
+                logging.info(f"Trial model not found for {test.class_name}, attempting to create from test configuration")
+                if test.trial_columns:
+                    from app.models.dynamic_models import create_trial_model
+                    trial_model = create_trial_model(test.class_name, test.trial_columns)
+                    if trial_model:
+                        logging.info(f"Successfully created trial model for {test.class_name}")
+                    else:
+                        db.session.rollback()
+                        return False, f'Failed to create trial model for test class "{test.class_name}"', 500
+                else:
+                    db.session.rollback()
+                    return False, f'No trial columns defined for test class "{test.class_name}"', 500
+            
+            if not trial_model:
                 db.session.rollback()
-                return False, f'Trial model not found for test class "{test.class_name}"', 500
+                return False, f'Trial model not available for test class "{test.class_name}"', 500
             
             # Validate and store trials
             for i, trial_data in enumerate(trials):

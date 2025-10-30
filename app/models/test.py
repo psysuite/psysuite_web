@@ -1,6 +1,7 @@
 from datetime import datetime
 from app import db
 import json
+from sqlalchemy import event
 
 
 class Test(db.Model):
@@ -162,3 +163,85 @@ class Test(db.Model):
                 Test.description.contains(query)
             )
         ).all()
+    
+    def create_trial_table(self):
+        """Create the trial table for this test"""
+        if not self.trial_columns:
+            return False, "No trial columns defined"
+        
+        try:
+            from app.models.dynamic_models import create_trial_table
+            success = create_trial_table(self.class_name, self.trial_columns)
+            return success, "Trial table created successfully" if success else "Failed to create trial table"
+        except Exception as e:
+            return False, f"Error creating trial table: {str(e)}"
+    
+    def drop_trial_table(self):
+        """Drop the trial table for this test"""
+        try:
+            from app.models.dynamic_models import drop_trial_table
+            success = drop_trial_table(self.class_name)
+            return success, "Trial table dropped successfully" if success else "Failed to drop trial table"
+        except Exception as e:
+            return False, f"Error dropping trial table: {str(e)}"
+
+
+# SQLAlchemy event listeners to automatically manage trial tables
+def _create_trial_table_after_insert(mapper, connection, target):
+    """Automatically create trial table when a new test is created"""
+    if target.trial_columns:
+        try:
+            # Use db.session.commit() to ensure the transaction is complete
+            # Then create the trial table in a separate transaction
+            from sqlalchemy import create_engine
+            from app.models.dynamic_models import create_trial_table
+            
+            print(f"📝 Auto-creating trial table for {target.class_name}...")
+            success = create_trial_table(target.class_name, target.trial_columns)
+            if success:
+                print(f"✅ Trial table created automatically for {target.class_name}")
+            else:
+                print(f"❌ Failed to create trial table for {target.class_name}")
+        except Exception as e:
+            print(f"❌ Error creating trial table for {target.class_name}: {e}")
+
+
+def _update_trial_table_after_update(mapper, connection, target):
+    """Update trial table when test trial_columns are modified"""
+    # Check if trial_columns were modified
+    state = db.inspect(target)
+    if hasattr(state.attrs, '_trial_columns') and state.attrs._trial_columns.history.has_changes():
+        try:
+            # Get old and new values
+            old_columns = state.attrs._trial_columns.history.deleted[0] if state.attrs._trial_columns.history.deleted else {}
+            new_columns = target.trial_columns
+            
+            if new_columns and new_columns != old_columns:
+                from app.models.dynamic_models import update_trial_table
+                print(f"📝 Auto-updating trial table for {target.class_name}...")
+                success = update_trial_table(target.class_name, old_columns, new_columns)
+                if success:
+                    print(f"✅ Trial table updated automatically for {target.class_name}")
+                else:
+                    print(f"❌ Failed to update trial table for {target.class_name}")
+        except Exception as e:
+            print(f"❌ Error updating trial table for {target.class_name}: {e}")
+
+
+def _drop_trial_table_before_delete(mapper, connection, target):
+    """Drop trial table when test is deleted"""
+    try:
+        print(f"📝 Auto-dropping trial table for {target.class_name}...")
+        success, message = target.drop_trial_table()
+        if success:
+            print(f"✅ Trial table dropped automatically for {target.class_name}")
+        else:
+            print(f"❌ Failed to drop trial table for {target.class_name}: {message}")
+    except Exception as e:
+        print(f"❌ Error dropping trial table for {target.class_name}: {e}")
+
+
+# Register the event listeners
+event.listens_for(Test, 'after_insert')(_create_trial_table_after_insert)
+event.listens_for(Test, 'after_update')(_update_trial_table_after_update)
+event.listens_for(Test, 'before_delete')(_drop_trial_table_before_delete)

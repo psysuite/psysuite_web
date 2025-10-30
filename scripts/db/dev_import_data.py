@@ -96,7 +96,7 @@ def import_data(input_file='data_export.json', environment='production'):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) < 2:
-        print("Usage: python import_data.py <json_file> [environment]")
+        print("Usage: python dev_import_data.py <json_file> [environment]")
         sys.exit(1)
     
     input_file = sys.argv[1]
