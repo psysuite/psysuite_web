@@ -5,6 +5,16 @@
 
 ---
 
+## Quick Command Reference by Scenario
+
+| Scenario | First Installation | Start Environment | Code Changes | DB Reset | DB Backup |
+|----------|-------------------|-------------------|--------------|----------|-----------|
+| **venv (local)** | `python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python scripts/db/dev_recreate_db.py` | `python scripts/run_debug.py` | Restart server (Ctrl+C, then run again) | `python scripts/db/dev_recreate_db.py` | `pg_dump -U psysuite_user -d psysuite_dev > backup.sql` |
+| **Docker (local)** | `./deploy.sh docker && ./scripts/db/prod_add_testbis.sh` | `docker-compose up -d` | `docker-compose down && docker-compose up -d --build` | `./scripts/db/prod_recreate_db.sh` | `docker-compose exec db pg_dump -U psysuite psysuite_web > backup.sql` |
+| **Docker (VPS)** | `git init && git remote add origin <url> && git pull origin main && ./deploy.sh docker` | `docker-compose up -d` | `git pull origin main && docker-compose down && docker-compose up -d --build` | `./scripts/db/prod_recreate_db.sh` | `docker-compose exec db pg_dump -U psysuite psysuite_web > backup.sql` |
+
+---
+
 ## Table of Contents
 
 1. [Scenario 1: Local Development (venv)](#scenario-1-local-development-venv)
@@ -138,9 +148,14 @@ with app.app_context():
 # Start: python scripts/run_debug.py
 ```
 
-### Recompile Code (without touching DB)
+### Code Changes (without touching DB)
 
-Just restart the server - code changes are picked up automatically.
+Just restart the server - code changes are picked up automatically:
+
+```bash
+# Stop: Ctrl+C
+# Start: python scripts/run_debug.py
+```
 
 ---
 
@@ -272,11 +287,24 @@ docker-compose down
 docker-compose up -d
 ```
 
-### Recompile Code (without touching DB)
+### Code Changes (without touching DB)
 
+**If only Python/HTML code changed**:
+```bash
+docker-compose restart web
+```
+
+**If changes don't appear or dependencies changed**:
 ```bash
 docker-compose down
 docker-compose up -d --build
+```
+
+**If still not working (clear Docker cache)**:
+```bash
+docker system prune -a
+docker-compose down
+docker-compose up -d
 ```
 
 ---
@@ -443,11 +471,33 @@ docker-compose down
 docker-compose up -d
 ```
 
-### Recompile Code (without touching DB)
+### Code Changes (without touching DB)
 
+**If only Python/HTML code changed**:
 ```bash
+# Pull latest code
+git pull origin main
+
+# Restart containers
+docker-compose restart web
+```
+
+**If changes don't appear or dependencies changed**:
+```bash
+# Pull latest code
+git pull origin main
+
+# Rebuild
 docker-compose down
 docker-compose up -d --build
+```
+
+**If still not working (clear Docker cache)**:
+```bash
+git pull origin main
+docker system prune -a
+docker-compose down
+docker-compose up -d
 ```
 
 ---
@@ -513,35 +563,72 @@ with app.app_context():
 
 ### Local Development (venv)
 
+**Only code changes (no DB changes)**:
 ```bash
-# Make changes, test locally
+# Stop server
+# Ctrl+C
+
+# Make your code changes
 # ...
 
-# Restart server to pick up changes
-# Stop: Ctrl+C
-# Start: python scripts/run_debug.py
+# Restart server
+python scripts/run_debug.py
+```
+
+**With database changes**:
+```bash
+# Stop server (Ctrl+C)
+
+# Make changes
+# ...
+
+# Reset database
+python scripts/db/dev_recreate_db.py
+
+# Restart server
+python scripts/run_debug.py
 ```
 
 ### Local Docker
 
+**Only code changes (no DB changes)**:
 ```bash
-# Make changes
-# ...
+# Option 1: Quick restart (if only Python/HTML changed)
+docker-compose restart web
 
-# Recompile without touching DB
+# Option 2: Full rebuild (if dependencies changed)
+docker-compose down
+docker-compose up -d --build
+```
+
+**With database changes**:
+```bash
+# Reset database
+./scripts/db/prod_recreate_db.sh
+
+# Restart containers
+docker-compose restart
+```
+
+**If changes don't appear**:
+```bash
+# Complete rebuild (clears Docker cache)
 docker-compose down
 docker-compose up -d --build
 
-# Or just restart if only Python code changed
-docker-compose restart web
+# Or full cleanup
+docker system prune -a
+docker-compose down
+docker-compose up -d
 ```
 
 ### Remote VPS (with Git)
 
+**Only code changes (no DB changes)**:
 ```bash
 # Local: commit and push
 git add .
-git commit -m "Fix bug X"
+git commit -m "Fix: description of change"
 git push origin main
 
 # VPS: pull and rebuild
@@ -553,13 +640,39 @@ docker-compose up -d --build
 docker-compose logs -f web
 ```
 
+**With database changes**:
+```bash
+# Local: commit and push
+git add .
+git commit -m "Feature: description"
+git push origin main
+
+# VPS: pull, reset DB, rebuild
+git pull origin main
+./scripts/db/prod_recreate_db.sh
+docker-compose down
+docker-compose up -d --build
+```
+
 ### Remote VPS (without Git)
 
+**Only code changes (no DB changes)**:
 ```bash
 # Local: upload new code
 scp -r web_app/ root@your-vps-ip:/root/
 
 # VPS: rebuild
+docker-compose down
+docker-compose up -d --build
+```
+
+**With database changes**:
+```bash
+# Local: upload new code
+scp -r web_app/ root@your-vps-ip:/root/
+
+# VPS: reset DB and rebuild
+./scripts/db/prod_recreate_db.sh
 docker-compose down
 docker-compose up -d --build
 ```

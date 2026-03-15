@@ -23,9 +23,12 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-8 d-flex align-items-end">
-            <button onclick="selectAllExperiments()" class="btn btn-secondary me-2" id="selectAllBtn">Select All</button>
-            <button onclick="downloadSelectedExperiments()" class="btn btn-primary me-2" id="downloadBtn" disabled>Download Selected</button>
+        <div class="col-md-8 d-flex align-items-end gap-2">
+            <button onclick="selectAllExperiments()" class="btn btn-secondary" id="selectAllBtn">Select All</button>
+            <button onclick="downloadSelectedExperiments()" class="btn btn-primary" id="downloadBtn" disabled>Download Selected</button>
+            {% if current_user.role == 'admin' %}
+            <button onclick="deleteSelectedExperiments()" class="btn btn-danger" id="deleteBtn" disabled>Delete Selected</button>
+            {% endif %}
             <span id="selectedCount" class="text-muted">0 selected</span>
         </div>
     </div>
@@ -140,6 +143,12 @@ function updateSelectedCount() {
     document.getElementById('selectedCount').textContent = `${count} selected`;
     document.getElementById('downloadBtn').disabled = count === 0;
     
+    // Update delete button if admin
+    const deleteBtn = document.getElementById('deleteBtn');
+    if (deleteBtn) {
+        deleteBtn.disabled = count === 0;
+    }
+    
     // Update select all checkbox state and button text
     if (count === 0) {
         selectAllCheckbox.indeterminate = false;
@@ -191,6 +200,58 @@ function downloadSelectedExperiments() {
     experimentIds.forEach(id => params.append('experiment_ids', id));
     
     window.location.href = `/api/experiments/download?${params.toString()}`;
+}
+
+function deleteSelectedExperiments() {
+    const checkboxes = document.querySelectorAll('input[data-experiment-id]:checked');
+    const experimentIds = Array.from(checkboxes).map(cb => cb.dataset.experimentId);
+    
+    if (experimentIds.length === 0) {
+        showAlert('Please select experiments to delete', 'warning');
+        return;
+    }
+    
+    const confirmMessage = `Are you sure you want to delete ${experimentIds.length} experiment(s)? This action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    // Show loading state
+    const deleteBtn = document.getElementById('deleteBtn');
+    const originalText = deleteBtn.textContent;
+    deleteBtn.disabled = true;
+    deleteBtn.textContent = 'Deleting...';
+    
+    fetch('/api/experiments/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            experiment_ids: experimentIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showAlert(`Error: ${data.error}`, 'danger');
+        } else {
+            showAlert(`Successfully deleted ${data.deleted} experiment(s)${data.failed > 0 ? ` (${data.failed} failed)` : ''}`, 'success');
+            // Reload page after 1 second
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('An error occurred while deleting experiments', 'danger');
+    })
+    .finally(() => {
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = originalText;
+    });
 }
 
 function filterByProject() {

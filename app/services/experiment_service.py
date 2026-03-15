@@ -175,6 +175,69 @@ def delete_experiment_service(experiment_id, user_permissions=None):
         return False, 'Internal server error', 500
 
 
+def delete_experiments_service(experiment_ids, user_permissions=None):
+    """
+    Delete multiple experiments and their trial data.
+    
+    Args:
+        experiment_ids (list): List of experiment IDs to delete
+        user_permissions (dict, optional): User permission context
+    
+    Returns:
+        tuple: (success: bool, result: dict|str, error_code: int|None)
+               - If success: (True, {'deleted': count, 'failed': count}, None)
+               - If error: (False, error_message, http_status_code)
+    """
+    try:
+        if not experiment_ids:
+            return False, 'No experiment IDs provided', 400
+        
+        # Convert to integers
+        try:
+            experiment_ids = [int(id) for id in experiment_ids]
+        except ValueError:
+            return False, 'Invalid experiment ID format', 400
+        
+        # Only admins can delete experiments
+        if user_permissions and not user_permissions.get('is_admin', False):
+            return False, 'Admin access required to delete experiments', 403
+        
+        # Get experiments
+        experiments = Experiment.query.filter(Experiment.id.in_(experiment_ids)).all()
+        
+        if not experiments:
+            return False, 'No experiments found', 404
+        
+        deleted_count = 0
+        failed_count = 0
+        
+        for experiment in experiments:
+            try:
+                # Get trial model to delete trial data
+                test = experiment.test
+                if test and test.class_name:
+                    trial_model = get_trial_model(test.class_name)
+                    if trial_model:
+                        # Delete all trials for this experiment
+                        trial_model.query.filter_by(experiment_id=experiment.id).delete()
+                
+                # Delete the experiment
+                db.session.delete(experiment)
+                deleted_count += 1
+            except Exception as e:
+                logging.error(f"Error deleting experiment {experiment.id}: {e}")
+                failed_count += 1
+        
+        db.session.commit()
+        
+        return True, {'deleted': deleted_count, 'failed': failed_count}, None
+        
+    except Exception as e:
+        logging.error(f"Delete experiments service error: {e}")
+        db.session.rollback()
+        return False, 'Internal server error', 500
+
+
 def export_experiment_data_service(experiment_ids, format='csv', user_permissions=None):
     """
     Export experiment data in various formats.

@@ -194,6 +194,42 @@ def download_experiments():
         return jsonify({'error': 'Internal server error'}), 500
 
 
+@bp.route('/experiments/delete', methods=['POST'])
+@researcher_required
+@log_access('delete_experiments')
+def delete_experiments():
+    """Delete selected experiments (admin only)"""
+    try:
+        # Get experiment IDs from request body
+        data = request.get_json()
+        experiment_ids = data.get('experiment_ids', []) if data else []
+        
+        if not experiment_ids:
+            return jsonify({'error': 'No experiment IDs provided'}), 400
+        
+        # Prepare user permissions context
+        user_permissions = {
+            'is_admin': current_user.is_admin(),
+            'accessible_project_names': current_user.get_accessible_project_names()
+        }
+        
+        # Use service to delete experiments
+        from app.services.experiment_service import delete_experiments_service
+        success, result, error_code = delete_experiments_service(
+            experiment_ids=experiment_ids,
+            user_permissions=user_permissions
+        )
+        
+        if not success:
+            return jsonify({'error': result}), error_code
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        logging.error(f"Delete experiments error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 @bp.route('/experiments/<int:experiment_id>', methods=['DELETE'])
 @researcher_required
 @log_access('delete_experiment')
