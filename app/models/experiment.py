@@ -20,7 +20,7 @@ class Experiment(db.Model):
     population = db.Column(db.Integer)
     session = db.Column(db.Integer)
     type = db.Column(db.Integer)
-    date = db.Column(db.String(50))  # Date as string from Android
+    date = db.Column(db.String(100))  # Date/datetime as string from Android (format: yyyy-MM-dd HH:mm:ss)
 
     # Test configuration info (single_experiment page)
     device = db.Column(db.Text)  # Device info as JSON string

@@ -74,6 +74,7 @@ def upload_experiment_service(exp_uid, test_class_name, configuration, trials, d
         # Log experiment upload for debugging
         logging.info(f"Experiment upload - ID: {exp_uid}, Test: {test_class_name}")
         logging.debug(f"Configuration fields: {list(configuration.keys())}")
+        logging.debug(f"Date field value: {configuration.get('date')}")
         
         # Helper function to convert boolean to integer
         def bool_to_int(value):

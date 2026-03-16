@@ -62,8 +62,8 @@ def create_app(config_name='default', skip_db_init=False):
                 initialize_existing_tests()
             except Exception as e:
                 # This is expected on fresh databases where tables don't exist yet
-                print(f"Note: Could not initialize existing tests (expected on fresh database): {e}")
-                pass
+                import logging
+                logging.debug(f"Could not initialize existing tests (expected on fresh database): {e}")
     
     return app
 

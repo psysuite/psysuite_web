@@ -275,6 +275,10 @@ else:
     # Initialize database
     print_status "Initializing database..."
     python init_db.py
+
+    print_status "Adding TestBIS..."
+    python scripts/db/dev_add_testbis.py
+
     
     # Start application
     print_status "Starting application..."

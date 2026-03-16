@@ -5,6 +5,45 @@
 
 ---
 
+## ⚡ Super Quick Start
+
+### Reset Everything (Fresh Database)
+
+**Traditional (venv)**:
+```bash
+./deploy.sh traditional
+```
+
+**Docker**:
+```bash
+./deploy.sh docker
+```
+
+### Switch Environments
+
+**Docker → venv**:
+```bash
+docker-compose down
+./deploy.sh env-dev
+source venv/bin/activate
+python run.py
+```
+
+**venv → Docker**:
+```bash
+./deploy.sh env-docker
+docker-compose up -d --build && docker-compose logs -f web
+```
+
+### Code Changes
+
+**Docker (after code changes)**:
+```bash
+docker-compose down && docker-compose up -d --build && docker-compose logs -f web
+```
+
+---
+
 ## Quick Command Reference by Scenario
 
 | Scenario | First Installation | Start Environment | Code Changes | DB Reset | DB Backup |
@@ -20,9 +59,95 @@
 1. [Scenario 1: Local Development (venv)](#scenario-1-local-development-venv)
 2. [Scenario 2: Local Docker](#scenario-2-local-docker)
 3. [Scenario 3: Remote VPS](#scenario-3-remote-vps)
-4. [Database Management](#database-management)
-5. [Code Updates & Deployment](#code-updates--deployment)
-6. [Troubleshooting](#troubleshooting)
+4. [Switching Between Environments](#switching-between-environments)
+5. [Database Management](#database-management)
+6. [Code Updates & Deployment](#code-updates--deployment)
+7. [Troubleshooting](#troubleshooting)
+
+---
+
+## Switching Between Environments
+
+### From Docker (local) → venv (local)
+
+**Backup Docker database first**:
+```bash
+docker-compose exec db pg_dump -U psysuite psysuite_web > backup_docker.sql
+```
+
+**Stop Docker**:
+```bash
+docker-compose down
+```
+
+**Setup venv environment**:
+```bash
+cd web_app
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Linux/Mac or venv\Scripts\activate on Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create fresh venv database
+python scripts/db/dev_recreate_db.py
+
+# Start server
+python scripts/run_debug.py
+```
+
+**To restore Docker data into venv** (optional):
+```bash
+# First, convert Docker backup to venv format if needed
+# Then restore
+psql -U psysuite_user -d psysuite_dev -h localhost < backup_docker.sql
+```
+
+### From venv (local) → Docker (local)
+
+**Backup venv database first**:
+```bash
+pg_dump -U psysuite_user -d psysuite_dev -h localhost > backup_venv.sql
+```
+
+**Stop venv server**:
+```bash
+# Ctrl+C in the terminal running the server
+```
+
+**Deactivate venv**:
+```bash
+deactivate
+```
+
+**Start Docker**:
+```bash
+cd web_app
+
+# Deploy Docker
+./deploy.sh docker
+
+# Add test data
+./scripts/db/prod_add_testbis.sh
+```
+
+**To restore venv data into Docker** (optional):
+```bash
+# Restore backup into Docker database
+docker-compose exec db psql -U psysuite psysuite_web < backup_venv.sql
+```
+
+### Important Notes on Migration
+
+1. **Database compatibility**: Both environments use PostgreSQL, so backups are compatible
+2. **API keys and secrets**: May differ between environments - check `.env` files
+3. **Port conflicts**: venv uses port 5001, Docker uses port 80 - no conflicts
+4. **Data persistence**: Always backup before switching to avoid data loss
+5. **Dependencies**: venv and Docker may have different Python versions - reinstall if issues occur
+
+---
 
 ---
 
@@ -269,8 +394,22 @@ with app.app_context():
 # Check containers
 docker-compose ps
 
-# View logs
+# View logs in real-time
 docker-compose logs -f web
+
+# View last 100 lines
+docker-compose logs --tail=100 web
+
+# View all services logs
+docker-compose logs -f
+
+# View database logs
+docker-compose logs -f db
+
+# View nginx logs
+docker-compose logs -f nginx
+
+# Exit logs: Ctrl+C
 
 # Health check
 curl http://localhost/api/health
@@ -299,6 +438,8 @@ docker-compose restart web
 docker-compose down
 docker-compose up -d --build
 ```
+
+**Note**: `docker-compose down` stops containers but keeps the database intact (data persists in volumes). If you want to delete the database too, use `docker-compose down -v`.
 
 **If still not working (clear Docker cache)**:
 ```bash
@@ -453,8 +594,22 @@ with app.app_context():
 # Check containers
 docker-compose ps
 
-# View logs
+# View logs in real-time
 docker-compose logs -f web
+
+# View last 100 lines
+docker-compose logs --tail=100 web
+
+# View all services logs
+docker-compose logs -f
+
+# View database logs
+docker-compose logs -f db
+
+# View nginx logs
+docker-compose logs -f nginx
+
+# Exit logs: Ctrl+C
 
 # Health check
 curl http://localhost/api/health

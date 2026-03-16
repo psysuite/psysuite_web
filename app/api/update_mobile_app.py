@@ -122,7 +122,10 @@ def psysuitestableupdate():
         return Response(response=xml_response, status=200, mimetype="application/xml")
         
     except Exception as e:
-        logging.error(f"Error serving update XML: {e}")
+        logging.error(f"Error serving update XML: {e}", exc_info=True)
+        # Return 404 if no versions found, 500 for other errors
+        if "No PsySuite versions available" in str(e) or not PsysuiteApplication.get_latest():
+            abort(404)
         abort(500)
 
 
