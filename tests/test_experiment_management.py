@@ -148,7 +148,7 @@ class TestExperimentManagement:
             
             test = Test(
                 name='All Experiments Test',
-                class_name='iit.uvip.psysuite.core.tests.all.TestAll',
+                class_name='org.albaspazio.psysuite.tests.all.TestAll',
                 description='Test for getting all experiments',
                 status='development',
                 trial_columns={'response_time': 'integer'}
@@ -191,7 +191,7 @@ class TestExperimentManagement:
             
             test = Test(
                 name='Test Experiments Test',
-                class_name='iit.uvip.psysuite.core.tests.testexp.TestTestExp',
+                class_name='org.albaspazio.psysuite.tests.testexp.TestTestExp',
                 description='Test for getting test experiments',
                 status='development',
                 trial_columns={'response_time': 'integer'}
@@ -239,7 +239,7 @@ class TestExperimentManagement:
             
             test = Test(
                 name='Single Experiment Test',
-                class_name='iit.uvip.psysuite.core.tests.single.TestSingle',
+                class_name='org.albaspazio.psysuite.tests.single.TestSingle',
                 description='Test for getting single experiment',
                 status='development',
                 trial_columns={'response_time': 'integer'}
@@ -286,7 +286,7 @@ class TestExperimentManagement:
             # Create test and trial table
             test = Test(
                 name='Trials Test',
-                class_name='iit.uvip.psysuite.core.tests.trials.TestTrials',
+                class_name='org.albaspazio.psysuite.tests.trials.TestTrials',
                 description='Test for getting trials',
                 status='development',
                 trial_columns={
@@ -360,7 +360,7 @@ class TestExperimentManagement:
             # Create test and experiment to delete
             test = Test(
                 name='Delete Test',
-                class_name='iit.uvip.psysuite.core.tests.delete.TestDelete',
+                class_name='org.albaspazio.psysuite.tests.delete.TestDelete',
                 description='Test for deletion',
                 status='development',
                 trial_columns={'response_time': 'integer'}
@@ -405,7 +405,7 @@ class TestExperimentManagement:
             
             test = Test(
                 name='Statistics Test',
-                class_name='iit.uvip.psysuite.core.tests.stats.TestStats',
+                class_name='org.albaspazio.psysuite.tests.stats.TestStats',
                 description='Test for statistics',
                 status='development',
                 trial_columns={'response_time': 'integer'}
@@ -442,7 +442,7 @@ class TestExperimentManagement:
             # Create test
             test = Test(
                 name='Researcher Test',
-                class_name='iit.uvip.psysuite.core.tests.researcher.TestResearcher',
+                class_name='org.albaspazio.psysuite.tests.researcher.TestResearcher',
                 description='Test for researcher access',
                 status='production',  # Researchers can only see production tests
                 trial_columns={'response_time': 'integer'}

@@ -70,9 +70,9 @@ def test_logout(client, admin_user):
 def test_upload_validation(client):
     """Test upload validation endpoint."""
     test_data = {
-        "test_class_name": "iit.uvip.psysuite.core.tests.sample.TestSample",
+        "test_class_name": "org.albaspazio.psysuite.tests.sample.TestSample",
         "configuration": {
-            "classes": ["iit.uvip.psysuite.core.tests.sample.TestSample"],
+            "classes": ["org.albaspazio.psysuite.tests.sample.TestSample"],
             "label": "test_subject"
         }
     }

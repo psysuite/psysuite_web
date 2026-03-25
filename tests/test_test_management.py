@@ -17,7 +17,7 @@ class TestTestManagement:
         
         test_data = {
             'name': 'New Test',
-            'class_name': 'iit.uvip.psysuite.core.tests.new.TestNew',
+            'class_name': 'org.albaspazio.psysuite.tests.new.TestNew',
             'description': 'A new test for testing',
             'status': 'development',
             'trial_columns': {
@@ -32,7 +32,7 @@ class TestTestManagement:
         
         data = json.loads(response.data)
         assert data['test']['name'] == 'New Test'
-        assert data['test']['class_name'] == 'iit.uvip.psysuite.core.tests.new.TestNew'
+        assert data['test']['class_name'] == 'org.albaspazio.psysuite.tests.new.TestNew'
     
     def test_get_all_tests(self, client, admin_user, sample_test):
         """Test getting all tests."""
