@@ -16,7 +16,7 @@ The PsySuite Web Manager is **production-ready** with project-based access contr
 ./scripts/db/prod_recreate_db.sh
 ./scripts/db/prod_add_testbis.sh
 ```
-**Result**: App running at `http://localhost` with admin login: `alberto.inuggi@gmail.com` / `antares`
+**Result**: App running at `http://localhost` with admin login: `mail@mail.com` / `1234`
 
 ### 🔧 Traditional Development (PyCharm)
 ```bash
@@ -107,7 +107,7 @@ python scripts/run_debug.py
    ```bash
    SECRET_KEY=your-very-secure-secret-key-here
    POSTGRES_PASSWORD=your-secure-db-password
-   ADMIN_PASSWORD=your-secure-admin-password  # Change from 'antares'
+   ADMIN_PASSWORD=your-secure-admin-password  # Change from '1234'
    ```
 
 4. **Deploy**
@@ -317,7 +317,7 @@ cat .env
 ## Security Checklist
 
 ### ⚠️ Critical - Change Before Production
-- [ ] Admin password (change from 'antares' in .env.docker)
+- [ ] Admin password (change from '1234' in .env.docker)
 - [ ] SECRET_KEY (generate secure random string)
 - [ ] PostgreSQL password in .env.docker
 - [ ] SSL certificate for HTTPS (use scripts/setup-ssl.sh)
@@ -337,11 +337,11 @@ cat .env
 ### Docker Deployment (Production)
 - **Web Interface**: http://localhost (via Nginx)
 - **Direct Flask**: http://localhost:5000
-- **Admin Login**: alberto.inuggi@gmail.com / antares
+- **Admin Login**: mail@mail.com / 1234
 
 ### Traditional Deployment (Development)
 - **Web Interface**: http://localhost:5001
-- **Admin Login**: alberto.inuggi@gmail.com / antares
+- **Admin Login**: mail@mail.com / 1234
 
 ### API Endpoints (for Android App)
 ```bash
@@ -408,6 +408,6 @@ curl http://your-domain.com/api/health
 
 **Deployment Time**: 5-15 minutes with unified scripts
 
-**Default Admin**: `alberto.inuggi@gmail.com` / `antares` (⚠️ Change password in production!)
+**Default Admin**: `mail@mail.com` / `1234` (⚠️ Change password in production!)
 
 The PsySuite Web Manager now features a streamlined deployment system with comprehensive script organization and dual environment support for both development and production needs.
