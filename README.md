@@ -94,8 +94,8 @@ The system uses environment-specific configuration files:
 - **`.env.production`** - VPS production
 
 ### **Default Admin Account**
-- **Email**: alberto.inuggi@gmail.com  
-- **Password**: antares
+- **Email**: mail@mail.com  
+- **Password**: 1234
 
 **⚠️ Important**: Change the default password after first login in production!
 
@@ -129,7 +129,7 @@ ADMIN_PASSWORD=antares
 FLASK_CONFIG=production
 SECRET_KEY=your-production-secret-key
 DATABASE_URL=postgresql://psysuite:psysuite_password@db:5432/psysuite_web
-ADMIN_EMAIL=alberto.inuggi@gmail.com
+ADMIN_EMAIL=mail@mail.com
 ADMIN_PASSWORD=your-secure-password
 ```
 
@@ -138,7 +138,7 @@ ADMIN_PASSWORD=your-secure-password
 FLASK_CONFIG=production
 SECRET_KEY=your-production-secret-key
 DATABASE_URL=postgresql://psysuite_user:secure_password@localhost:5432/psysuite_prod
-ADMIN_EMAIL=alberto.inuggi@gmail.com
+ADMIN_EMAIL=mail@mail.com
 ADMIN_PASSWORD=your-secure-password
 ```
 
